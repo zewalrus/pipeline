@@ -15,7 +15,7 @@
 <style>
 :root{
   --paper:#E7E9E6; --card:#F5F6F4; --line:#CFD4CF; --ink:#17191A; --muted:#6B7370;
-  --log:#7E8E96; --mid:#B8802B; --grade:#A8324E;
+  --log:#7E8E96; --mid:#B8802B; --ready:#5C7F63; --grade:#A8324E;
   --r:4px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -43,8 +43,10 @@ nav{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px s
   letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-left-width:4px}
 .clip[data-p="capture"]{border-left-color:var(--log)}
 .clip[data-p="batch"]{border-left-color:var(--mid)}
+.clip[data-p="ready"]{border-left-color:var(--ready)}
 .clip[data-p="ship"]{border-left-color:var(--grade)}
-.clip b{display:block;font-family:"Public Sans",sans-serif;font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:600}
+@media(max-width:520px){ .clip{padding:7px 6px;border-left-width:3px} }
+.clip b{display:block;font-family:"Public Sans",sans-serif;font-size:clamp(12px,3.4vw,15px);letter-spacing:0;text-transform:none;color:var(--ink);font-weight:600}
 .clip.on{background:var(--ink);color:#9AA3A0}
 .clip.on b{color:#fff}
 
@@ -79,6 +81,7 @@ button:focus-visible{outline:2px solid var(--grade);outline-offset:2px}
 @media(min-width:760px){ .cards{grid-template-columns:1fr 1fr} }
 .idea{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--log);border-radius:var(--r);padding:12px}
 .idea[data-stage=batch]{border-left-color:var(--mid)}
+.idea[data-stage=ready]{border-left-color:var(--ready)}
 .idea[data-stage=ship]{border-left-color:var(--grade)}
 .idea[data-stage=posted]{border-left-color:var(--ink);opacity:.6}
 .hook{font-family:"Bricolage Grotesque",sans-serif;font-weight:600;font-size:17px;line-height:1.2;margin-bottom:6px}
@@ -92,6 +95,7 @@ select{font-size:13px;padding:6px 8px}
 .strip{display:flex;gap:2px;margin:8px 0}
 .seg{flex:1;height:7px;background:#DDE0DC;border-radius:1px}
 .seg.done{background:var(--mid)}
+.idea[data-stage=ready] .seg.done{background:var(--ready)}
 .idea[data-stage=ship] .seg.done,.idea[data-stage=posted] .seg.done{background:var(--grade)}
 .beats{display:none;margin-top:8px;padding-top:10px;border-top:1px dashed var(--line)}
 .beats.open{display:block}
@@ -120,6 +124,8 @@ select{font-size:13px;padding:6px 8px}
 .check.done span{text-decoration:line-through;color:var(--muted)}
 .empty{border:1px dashed var(--line);border-radius:var(--r);padding:22px 14px;text-align:center;color:var(--muted);font-size:14px}
 .count{font:400 11px/1 "IBM Plex Mono",monospace;color:var(--muted)}
+.gate{font:400 12px/1.35 "Public Sans",sans-serif;color:var(--muted);margin-top:7px}
+.gate b{color:var(--ink);font-weight:600}
 footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size:12px;color:var(--muted)}
 @media (prefers-reduced-motion:no-preference){ .idea{transition:border-color .2s} }
 </style>
@@ -137,7 +143,8 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
   <div class="track">
     <button class="clip on" data-p="capture">01 <b>Capture</b><span class="count" id="c-capture"></span></button>
     <button class="clip" data-p="batch">02 <b>Batch</b><span class="count" id="c-batch"></span></button>
-    <button class="clip" data-p="ship">03 <b>Ship</b><span class="count" id="c-ship"></span></button>
+    <button class="clip" data-p="ready">03 <b>Ready</b><span class="count" id="c-ready"></span></button>
+    <button class="clip" data-p="ship">04 <b>Ship</b><span class="count" id="c-ship"></span></button>
   </div>
   <div class="count" id="save-state" style="padding:5px 2px 1px">checking storage…</div>
 </nav>
@@ -164,12 +171,7 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
 <!-- ============ BATCH ============ -->
 <section id="s-batch">
   <div class="phase-head"><span class="n">02</span><h2>Batch</h2></div>
-  <p class="phase-sub">Once a week, before you touch the camera. Sort by pillar, build the beat sheet, then film everything in one sitting.</p>
-
-  <div class="panel">
-    <h3>Everything to film this batch</h3>
-    <div id="batch-plan" style="font-size:14px"></div>
-  </div>
+  <p class="phase-sub">Once a week, before you touch the camera. Sort by pillar, build the beat sheet, list your shots.</p>
 
   <div class="panel">
     <h3>Filter by pillar</h3>
@@ -179,9 +181,22 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
   <div class="cards" id="list-batch"></div>
 </section>
 
+<!-- ============ READY ============ -->
+<section id="s-ready">
+  <div class="phase-head"><span class="n">03</span><h2>Ready</h2></div>
+  <p class="phase-sub">Beats written, shots listed. Nothing here needs thinking about — set the camera up and work down the list.</p>
+
+  <div class="panel">
+    <h3>Everything to film</h3>
+    <div id="ready-plan" style="font-size:14px"></div>
+  </div>
+
+  <div class="cards" id="list-ready"></div>
+</section>
+
 <!-- ============ SHIP ============ -->
 <section id="s-ship">
-  <div class="phase-head"><span class="n">03</span><h2>Ship</h2></div>
+  <div class="phase-head"><span class="n">04</span><h2>Ship</h2></div>
   <p class="phase-sub">Grade it, post it, then look back once a week at what actually held attention.</p>
 
   <div class="panel">
@@ -329,6 +344,23 @@ const el = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const beatsOf = i => Array.isArray(i.beats) ? i.beats : [];
 const done = i => beatsOf(i).filter(b=>(b.t||"").trim()).length;
+const isReady = i => done(i)>0 && (i.shots||[]).length>0;
+const gateText = i => {
+  const missing = [];
+  if(!done(i)) missing.push("at least one beat");
+  if(!(i.shots||[]).length) missing.push("at least one shot");
+  return missing.length ? `Needs <b>${missing.join(" and ")}</b> before it can move to Ready.` : "";
+};
+function refreshGate(i, cardEl){
+  if(!cardEl) return;
+  const btn = cardEl.querySelector('[data-act="to-ready"]'); if(!btn) return;
+  const ok = isReady(i);
+  btn.disabled = !ok; btn.style.opacity = ok ? "" : ".35"; btn.style.cursor = ok ? "" : "default";
+  let g = cardEl.querySelector(".gate");
+  if(ok){ if(g) g.remove(); return; }
+  if(!g){ g = document.createElement("div"); g.className = "gate"; btn.closest(".row").after(g); }
+  g.innerHTML = gateText(i);
+}
 
 /* ---- nav ---- */
 document.querySelectorAll(".clip").forEach(c=>c.onclick=()=>{
@@ -362,9 +394,10 @@ function card(i){
       <div class="row">
         <button class="ghost tiny" data-act="beats" data-id="${i.id}">${open[i.id]?"Hide beat sheet":"Beat sheet"} ${B.length?n+"/"+B.length:""}</button>
         <button class="ghost tiny" data-act="shots" data-id="${i.id}">${openH[i.id]?"Hide shots":"Shots"} ${(i.shots||[]).length||""}</button>
-        <button class="tiny" data-act="to-ship" data-id="${i.id}">Filmed → Ship</button>
+        <button class="tiny" data-act="to-ready" data-id="${i.id}"${isReady(i)?"":" disabled style=\"opacity:.35;cursor:default\""}>Ready to film →</button>
         <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button>
       </div>
+      ${isReady(i)?"":`<div class="gate">${gateText(i)}</div>`}
       <div class="beats${open[i.id]?" open":""}">
         <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">BEAT SHEET</div>
         <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">One idea per beat, 2–5 words. If you could read it out loud word for word, it's too long.</div>
@@ -403,6 +436,24 @@ function card(i){
         ${(i.shots||[]).length?`<button class="ghost tiny" data-act="shotclear" data-id="${i.id}">Clear filmed</button>`:""}</div>
       </div>`;
   }
+  if(i.stage==="ready"){
+    const B = beatsOf(i).filter(b=>(b.t||"").trim());
+    body = `<div class="strip">${B.map(()=>`<div class="seg done"></div>`).join("")}</div>
+      ${B.map((b,x)=>`<div class="beat" style="border-left-color:var(--ready)">
+        <div class="beat-top"><span class="tc">${String(x+1).padStart(2,"0")}</span>
+        ${b.g?`<span class="nm" style="color:var(--ready)">${esc(b.g)}</span>`:""}</div>
+        <div style="font-size:16px;font-weight:600">${esc(b.t)}</div>
+        ${(b.d||"").trim()?`<div class="anchor"><label>Detail</label>
+          <div class="mono" style="font-size:13px;color:var(--grade)">${esc(b.d)}</div></div>`:""}
+      </div>`).join("")}
+      <div style="font:500 10px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--muted);margin:12px 0 6px">SHOTS</div>
+      ${(i.shots||[]).map((s,x)=>`<label class="check${s.done?" done":""}">
+        <input type="checkbox" data-act="shotdone" data-id="${i.id}" data-k="${x}"${s.done?" checked":""}>
+        <span>${esc(s.t)}</span></label>`).join("")||`<div style="font-size:13px;color:var(--muted)">No shots listed.</div>`}
+      <div class="row"><button class="tiny" data-act="to-ship" data-id="${i.id}">Filmed → Ship</button>
+      <button class="ghost tiny" data-act="back" data-id="${i.id}">Back to Batch</button>
+      <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
+  }
   if(i.stage==="ship"){
     body = `${EDITS.map((c,x)=>`<label class="check${i.checks[x]?" done":""}">
         <input type="checkbox" data-act="check" data-id="${i.id}" data-k="${x}"${i.checks[x]?" checked":""}><span>${c}</span></label>`).join("")}
@@ -439,7 +490,10 @@ function render(){
   el("list-batch").innerHTML = b.map(card).join("") ||
     `<div class="empty">Nothing in this batch. Send ideas over from Capture.</div>`;
 
-  const all = by("batch");
+  el("list-ready").innerHTML = by("ready").map(card).join("") ||
+    `<div class="empty">Nothing ready yet. A card moves here once it has beats written and shots listed.</div>`;
+
+  const all = by("ready");
   const LBL = {evidence:"Evidence shots",anchor:"Anchor footage",talking:"Talking head","":"Footage type not set"};
   const lab = s => `font:500 10px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;color:${s}`;
   let plan = "";
@@ -459,7 +513,7 @@ function render(){
     });
     plan += `</div>`;
   });
-  el("batch-plan").innerHTML = plan || `<p style="font-size:14px;color:var(--muted)">Nothing in this batch yet.</p>`;
+  el("ready-plan").innerHTML = plan || `<p style="font-size:14px;color:var(--muted)">Nothing ready to film yet.</p>`;
 
   const shipped = S.ideas.filter(i=>i.stage==="ship"||i.stage==="posted")
     .sort((a,b)=> (a.stage===b.stage) ? String(b.posted||"").localeCompare(String(a.posted||"")) : (a.stage==="ship"?-1:1));
@@ -467,7 +521,8 @@ function render(){
     `<div class="empty">Nothing filmed yet. Move an idea over once it's shot.</div>`;
 
   el("c-capture").textContent = by("capture").length+" waiting";
-  el("c-batch").textContent = all.length+" to shape";
+  el("c-batch").textContent = by("batch").length+" to shape";
+  el("c-ready").textContent = all.length+" to film";
   el("c-ship").textContent = by("ship").length+" to post";
   el("grading").value = S.grading; el("review").value = S.review;
 }
@@ -478,6 +533,7 @@ document.body.addEventListener("click", e=>{
   const i = S.ideas.find(x=>x.id===b.dataset.id); if(!i && b.dataset.act!=="check") return;
   const a = b.dataset.act;
   if(a==="to-batch") i.stage="batch";
+  else if(a==="to-ready"){ if(!isReady(i)) return; i.stage="ready"; }
   else if(a==="to-ship") i.stage="ship";
   else if(a==="back") i.stage="batch";
   else if(a==="posted"){ i.stage="posted"; if(!i.posted){ const d=new Date();
@@ -523,10 +579,12 @@ document.body.addEventListener("input", e=>{
   }
   if(t.dataset.act==="beattrig"){
     const i = S.ideas.find(x=>x.id===t.dataset.id); beatsOf(i)[+t.dataset.k].t = t.value; save();
-    const strip = t.closest(".idea").querySelector(".strip");
+    const cardEl = t.closest(".idea");
+    const strip = cardEl.querySelector(".strip");
     const n = done(i); [...strip.children].forEach((s,x)=>s.classList.toggle("done",x<n));
-    const btn = t.closest(".idea").querySelector('[data-act="beats"]');
+    const btn = cardEl.querySelector('[data-act="beats"]');
     if(btn) btn.textContent = "Hide beat sheet "+n+"/"+beatsOf(i).length;
+    refreshGate(i, cardEl);
   }
 });
 document.body.addEventListener("keydown", e=>{
@@ -552,7 +610,7 @@ el("export").onclick = async ()=>{
     (i.posted?`\n    posted: ${i.posted}`:"");
   const sec = (t,s) => `\n== ${t} ==\n`+(S.ideas.filter(i=>i.stage===s).map(line).join("\n\n")||"(empty)")+"\n";
   const txt = `CAPTURE / BATCH / SHIP\n`+sec("CAPTURE","capture")+sec("BATCH","batch")+
-    sec("SHIP","ship")+sec("POSTED","posted")+`\n== GRADING ==\n${S.grading}\n\n== LOOK-BACK ==\n${S.review}`;
+    sec("READY TO FILM","ready")+sec("SHIP","ship")+sec("POSTED","posted")+`\n== GRADING ==\n${S.grading}\n\n== LOOK-BACK ==\n${S.review}`;
   try{ await navigator.clipboard.writeText(txt); el("export-msg").textContent="copied"; }
   catch(err){ el("export-msg").textContent="press and hold to copy from the box below";
     const ta=document.createElement("textarea"); ta.value=txt; ta.style.cssText="width:100%;min-height:200px;margin-top:10px";
