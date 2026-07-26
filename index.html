@@ -152,12 +152,16 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
 <!-- ============ CAPTURE ============ -->
 <section id="s-capture" class="on">
   <div class="phase-head"><span class="n">01</span><h2>Capture</h2></div>
-  <p class="phase-sub">Whenever a hook hits you. Write the line, not the script — you'll build the story later.</p>
+  <p class="phase-sub">Whenever something occurs to you. Just the topic — the hook and the beats come later, in Batch.</p>
 
   <div class="panel">
     <h3>New idea</h3>
-    <label class="f" for="i-hook">Hook — the first line out of your mouth</label>
-    <textarea id="i-hook" placeholder="Type it the way you'd actually say it out loud."></textarea>
+    <label class="f" for="i-topic">Topic — what the video is about</label>
+    <textarea id="i-topic" placeholder="A few words is plenty. &quot;the parent who yelled at me&quot;, &quot;my first setup&quot;."></textarea>
+    <div class="sub">
+      <label class="f" for="i-pillar">Pillar</label>
+      <select id="i-pillar"></select>
+    </div>
     <div style="margin-top:10px">
       <label class="f" for="i-note">Note to self (optional)</label>
       <input type="text" id="i-note" placeholder="the detail you don't want to forget">
@@ -232,7 +236,8 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
 </div>
 
 <script>
-const PILLARS = ["Unsorted","Motivational","Story time","Lesbian fashion","Relatable / funny / conversational"];
+const PILLARS = ["Unsorted","Motivational","Story time","Lesbian fashion",
+  "Relatable / funny / conversational","Fingerboarding"];
 
 const FOOTAGE = [
   ["","Footage type — not set"],
@@ -242,6 +247,7 @@ const FOOTAGE = [
 ];
 
 /* Suggested shape only — beats are free-form. "Use this format" seeds these five. */
+const glabel = (b,x) => x===0 ? "Hook" : (b.g||"");
 const GUIDE = [
   ["Hook","the line that stops the scroll"],
   ["Scene","where and when, just enough to care"],
@@ -297,6 +303,7 @@ function migrate(d){
     if((i.script||"").trim() && !i.beats.length)
       i.beats = [{g:"", t:"(from your old script — trim this to keywords)", d:i.script.trim().slice(0,300)}];
     delete i.script;
+    if(i.hook && !i.topic){ i.topic = i.hook; delete i.hook; }
     if(!PILLARS.includes(i.cat)) i.cat = "Unsorted";
   });
   return d;
@@ -344,6 +351,7 @@ const el = id => document.getElementById(id);
 const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const beatsOf = i => Array.isArray(i.beats) ? i.beats : [];
 const done = i => beatsOf(i).filter(b=>(b.t||"").trim()).length;
+const topicOf = i => (i.topic || i.hook || "").trim();
 const isReady = i => done(i)>0 && (i.shots||[]).length>0;
 const gateText = i => {
   const missing = [];
@@ -365,10 +373,7 @@ function refreshGate(i, cardEl){
 /* Plain text for a teleprompter app: opening line, then one beat per line. */
 function tprompt(i){
   const B = beatsOf(i).filter(b=>(b.t||"").trim());
-  const head = (i.hook||"").trim();
-  const first = B.length ? B[0].t.trim() : "";
   const lines = [];
-  if(head && head.toLowerCase() !== first.toLowerCase()) lines.push(head, "");
   B.forEach(b=>{
     lines.push("- "+b.t.trim());
     if((b.d||"").trim()) lines.push("   > "+b.d.trim());
@@ -399,10 +404,11 @@ document.querySelectorAll(".clip").forEach(c=>c.onclick=()=>{
 
 /* ---- add ---- */
 el("add").onclick = ()=>{
-  const h = el("i-hook").value.trim(); if(!h) return;
-  S.ideas.unshift({id:"i"+Date.now(), hook:h, note:el("i-note").value.trim(), cat:"Unsorted",
+  const h = el("i-topic").value.trim(); if(!h) return;
+  S.ideas.unshift({id:"i"+Date.now(), topic:h, note:el("i-note").value.trim(),
+    cat:el("i-pillar").value||"Unsorted",
     footage:"", beats:[], checks:{}, stage:"capture", created:Date.now()});
-  el("i-hook").value=""; el("i-note").value=""; save(); render();
+  el("i-topic").value=""; el("i-note").value=""; el("i-pillar").value="Unsorted"; save(); render();
 };
 
 function card(i){
@@ -412,7 +418,8 @@ function card(i){
 
   let body = "";
   if(i.stage==="capture"){
-    body = `<div class="row"><button class="tiny" data-act="to-batch" data-id="${i.id}">Send to Batch</button>
+    body = `<div class="selects">${sel("cat",PILLARS,i.cat)}</div>
+      <div class="row"><button class="tiny" data-act="to-batch" data-id="${i.id}">Send to Batch</button>
       <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
   }
   if(i.stage==="batch"){
@@ -428,12 +435,12 @@ function card(i){
       ${isReady(i)?"":`<div class="gate">${gateText(i)}</div>`}
       <div class="beats${open[i.id]?" open":""}">
         <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">BEAT SHEET</div>
-        <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">One idea per beat, 2–5 words. If you could read it out loud word for word, it's too long.</div>
-        <div class="guide">${GUIDE.map(g=>`<span class="g"><b>${g[0]}</b> · ${esc(g[1])}</span>`).join("")}</div>
+        <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Beat 01 is always your hook — say that one how you'd actually say it. Everything after is keywords only, 2–5 words.</div>
+        <div class="guide">${GUIDE.slice(1).map(g=>`<span class="g"><b>${g[0]}</b> · ${esc(g[1])}</span>`).join("")}</div>
         ${B.map((b,x)=>`<div class="beat">
           <div class="beat-top">
             <span class="tc">${String(x+1).padStart(2,"0")}</span>
-            ${b.g?`<span class="nm">${esc(b.g)}</span>`:""}
+            ${glabel(b,x)?`<span class="nm"${x===0?' style="color:var(--grade)"':""}>${esc(glabel(b,x))}</span>`:""}
             <span class="beat-tools">
               <button data-act="beatup" data-id="${i.id}" data-k="${x}"${x===0?" disabled":""} aria-label="Move beat up">↑</button>
               <button data-act="beatdown" data-id="${i.id}" data-k="${x}"${x===B.length-1?" disabled":""} aria-label="Move beat down">↓</button>
@@ -441,7 +448,7 @@ function card(i){
             </span>
           </div>
           <input type="text" data-act="beattrig" data-id="${i.id}" data-k="${x}"
-            placeholder="what you're saying here — keywords only" value="${esc(b.t||"")}">
+            placeholder="${x===0?"the first line out of your mouth":"what you're saying here — keywords only"}" value="${esc(b.t||"")}">
           <div class="anchor">
             <label for="bd-${i.id}-${x}">Detail</label>
             <input type="text" id="bd-${i.id}-${x}" data-act="beatdetail" data-id="${i.id}" data-k="${x}"
@@ -469,7 +476,7 @@ function card(i){
     body = `<div class="strip">${B.map(()=>`<div class="seg done"></div>`).join("")}</div>
       ${B.map((b,x)=>`<div class="beat" style="border-left-color:var(--ready)">
         <div class="beat-top"><span class="tc">${String(x+1).padStart(2,"0")}</span>
-        ${b.g?`<span class="nm" style="color:var(--ready)">${esc(b.g)}</span>`:""}</div>
+        ${glabel(b,x)?`<span class="nm" style="color:${x===0?"var(--grade)":"var(--ready)"}">${esc(glabel(b,x))}</span>`:""}</div>
         <div style="font-size:16px;font-weight:600">${esc(b.t)}</div>
         ${(b.d||"").trim()?`<div class="anchor"><label>Detail</label>
           <div class="mono" style="font-size:13px;color:var(--grade)">${esc(b.d)}</div></div>`:""}
@@ -503,7 +510,7 @@ function card(i){
   }
   const ft = (FOOTAGE.find(f=>f[0]===i.footage)||["",""])[1];
   return `<article class="idea" data-stage="${i.stage}">
-    <div class="hook">${esc(i.hook)}</div>
+    <div class="hook">${esc(topicOf(i))}</div>
     <div class="meta">${esc(i.cat)}${i.footage?" · "+esc(ft.split(" (")[0]):""}${i.stage==="posted"?" · posted "+esc(i.posted||""):""}</div>
     ${i.note?`<div class="note">${esc(i.note)}</div>`:""}${body}</article>`;
 }
@@ -514,6 +521,8 @@ function render(){
     `<div class="empty">Nothing captured yet. Add a hook the second it occurs to you — you will not remember it later.</div>`;
 
   const f = el("filter");
+  const ip = el("i-pillar");
+  if(ip.options.length===0) ip.innerHTML = PILLARS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
   if(f.options.length===0){ f.innerHTML = `<option value="all">All pillars</option>`+
     PILLARS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join(""); f.value = filter; }
   const b = by("batch").filter(i=>filter==="all"||i.cat===filter);
@@ -535,10 +544,10 @@ function render(){
       const sub = grp.filter(i=>i.cat===p); if(!sub.length) return;
       plan += `<div style="margin:0 0 8px 10px;border-left:2px solid var(--line);padding-left:8px">
         <div style="${lab("var(--mid)")};margin-bottom:4px">${esc(p.toUpperCase())} · ${sub.length}</div>`;
-      const shots = sub.flatMap(i=>(i.shots||[]).filter(s=>!s.done).map(s=>({s:s.t,h:i.hook})));
+      const shots = sub.flatMap(i=>(i.shots||[]).filter(s=>!s.done).map(s=>({s:s.t,h:topicOf(i)})));
       plan += shots.length
         ? shots.map(o=>`<div style="padding:3px 0;border-bottom:1px solid var(--line)">${esc(o.s)}<div style="font-size:11px;color:var(--muted)">${esc(o.h.slice(0,54))}</div></div>`).join("")
-        : `<div style="font-size:13px;color:var(--muted)">${sub.map(i=>esc(i.hook.slice(0,54))).join("<br>")}<div style="font-size:11px;margin-top:3px">No shots listed yet — open a card and add them.</div></div>`;
+        : `<div style="font-size:13px;color:var(--muted)">${sub.map(i=>esc(topicOf(i).slice(0,54))).join("<br>")}<div style="font-size:11px;margin-top:3px">No shots listed yet — open a card and add them.</div></div>`;
       plan += `</div>`;
     });
     plan += `</div>`;
@@ -574,7 +583,7 @@ document.body.addEventListener("click", e=>{
   else if(a==="tp"){ copyText(tprompt(i), el("tp-"+i.id), b.closest(".row")); return; }
   else if(a==="beatadd"){ i.beats=beatsOf(i); i.beats.push({g:"",t:"",d:""}); open[i.id]=true; save(); render();
     const f=document.querySelector(`[data-act="beattrig"][data-id="${i.id}"][data-k="${i.beats.length-1}"]`); if(f) f.focus(); return; }
-  else if(a==="beatfmt"){ i.beats = GUIDE.map(g=>({g:g[0],t:"",d:""})); open[i.id]=true; save(); render(); return; }
+  else if(a==="beatfmt"){ i.beats = GUIDE.map((g,x)=>({g:x===0?"":g[0],t:"",d:""})); open[i.id]=true; save(); render(); return; }
   else if(a==="beatdel"){ i.beats=beatsOf(i); i.beats.splice(+b.dataset.k,1); save(); render(); return; }
   else if(a==="beatup"||a==="beatdown"){
     i.beats=beatsOf(i); const k=+b.dataset.k, j=a==="beatup"?k-1:k+1;
@@ -632,10 +641,10 @@ el("save-grade").onclick = ()=>{ S.grading = el("grading").value; save();
 el("save-review").onclick = ()=>{ S.review = el("review").value; save(); };
 
 el("export").onclick = async ()=>{
-  const line = i => `- ${i.hook}\n    pillar: ${i.cat}\n    footage: ${i.footage||"not set"}\n`+
+  const line = i => `- ${topicOf(i)}\n    pillar: ${i.cat}\n    footage: ${i.footage||"not set"}\n`+
     ((i.shots||[]).length?`    shots:\n`+i.shots.map(s=>`      [${s.done?"x":" "}] ${s.t}`).join("\n")+"\n":"")+
     (beatsOf(i).length?`    BEAT SHEET:\n`+beatsOf(i).map((b,x)=>
-      `      ${String(x+1).padStart(2,"0")}${b.g?" "+b.g:""} — ${b.t||"..."}`+
+      `      ${String(x+1).padStart(2,"0")}${glabel(b,x)?" "+glabel(b,x):""} — ${b.t||"..."}`+
       ((b.d||"").trim()?`\n           detail: ${b.d}`:"")).join("\n"):`    BEAT SHEET: (empty)`)+
     ((i.caption||"").trim()?`\n    CAPTION: ${i.caption}`:"")+
     (i.posted?`\n    posted: ${i.posted}`:"");
