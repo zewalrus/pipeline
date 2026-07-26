@@ -252,6 +252,37 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
     <div class="row"><button class="ghost" id="export">Copy as text</button><span class="count" id="export-msg"></span></div>
   </div>
 
+  <div class="panel" id="sync-panel">
+    <h3>Sync across devices</h3>
+    <div class="count" id="sync-state" style="margin-bottom:10px">checking…</div>
+
+    <div id="sync-setup" style="display:none">
+      <p style="font-size:14px;color:var(--muted)">Not configured yet. Paste your Firebase settings into the marked block near the bottom of index.html.</p>
+    </div>
+
+    <div id="sync-signin" style="display:none">
+      <label class="f" for="sync-email">Email</label>
+      <input type="email" id="sync-email" autocomplete="username" placeholder="the address you'll use on both devices">
+      <div style="margin-top:8px"><label class="f" for="sync-pass">Password</label>
+      <input type="password" id="sync-pass" autocomplete="current-password" placeholder="at least 6 characters"></div>
+      <div class="row"><button class="tiny" id="sync-in">Sign in</button>
+        <button class="ghost tiny" id="sync-new">Create account</button>
+        <span class="count" id="sync-msg"></span></div>
+    </div>
+
+    <div id="sync-on" style="display:none">
+      <div class="row"><button class="ghost tiny" id="sync-out">Sign out</button>
+        <button class="ghost tiny" id="sync-push">Push this device now</button></div>
+    </div>
+
+    <div id="sync-clash" style="display:none;border:1px solid var(--grade);border-radius:var(--r);padding:11px;margin-top:10px">
+      <div style="font-weight:600;margin-bottom:5px">Two different copies</div>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:9px" id="sync-clash-txt"></p>
+      <div class="row"><button class="tiny" id="clash-local">Keep this device</button>
+        <button class="tiny" id="clash-remote">Use the synced copy</button></div>
+    </div>
+  </div>
+
   <div class="panel">
     <h3>Backup &amp; restore</h3>
     <p style="font-size:14px;color:var(--muted);margin-bottom:10px">Copy this whole box somewhere safe. To restore, paste it back in and press Restore.</p>
@@ -261,7 +292,7 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
   </div>
 </section>
 
-<footer>Saves automatically in this artifact. Ideas move Capture → Batch → Ship → Posted.</footer>
+<footer>Ideas move Capture → Batch → Ready → Ship → Posted.</footer>
 </div>
 
 <div class="toast" id="toast"><span id="toast-msg"></span><button id="undo">Undo</button></div>
@@ -466,9 +497,37 @@ async function load(){
   render(); status();
 }
 let t;
-function save(){ clearTimeout(t); t = setTimeout(async()=>{
-  const ok = await writeStore(JSON.stringify(S)); status(ok);
-},250); }
+function save(){
+  S.rev = (S.rev||0) + 1;
+  clearTimeout(t); t = setTimeout(async()=>{
+    const ok = await writeStore(JSON.stringify(S)); status(ok);
+    if(BRIDGE.onLocalChange) BRIDGE.onLocalChange();
+  },250);
+}
+
+/* Bridge the sync module (loaded below as type=module) talks to. */
+const BRIDGE = {
+  onLocalChange: null,
+  getState: () => S,
+  getRev: () => S.rev || 0,
+  applyRemote(d){
+    const a = document.activeElement;
+    if(a && (a.tagName==="TEXTAREA" || a.tagName==="INPUT") && a.id!=="q"){
+      clearTimeout(BRIDGE._defer);
+      BRIDGE._defer = setTimeout(()=>BRIDGE.applyRemote(d), 3000);
+      return;
+    }
+    try{ localStorage.setItem(KEY+":prevync", JSON.stringify(S)); }catch(e){}
+    S = migrate(d); S.rev = d.rev || S.rev || 0;
+    writeStore(JSON.stringify(S)); render();
+  },
+  setStatus(txt, tone){
+    const e = el("sync-state"); if(!e) return;
+    e.textContent = txt; e.style.color = tone==="bad" ? "var(--grade)"
+      : tone==="good" ? "var(--ready)" : "var(--muted)";
+  }
+};
+window.BRIDGE = BRIDGE;
 function status(ok){
   const e = el("save-state"); if(!e) return;
   if(MODE==="none"){ e.textContent = "NOT SAVING — use Copy as text to keep your work"; e.style.color="var(--grade)"; }
@@ -862,6 +921,128 @@ el("restore").onclick = ()=>{
 };
 
 load();
+</script>
+
+<!-- ============================================================
+     SYNC  —  paste your Firebase settings between the brackets.
+     Firebase console → Project settings → Your apps → Web app → Config.
+     Leave it as-is and the app just runs offline on this device.
+     ============================================================ -->
+<script type="module">
+const FIREBASE_CONFIG = {
+   apiKey: "AIzaSyCEitxdKFPDDOLMObRFKVoVM9eFohjBeQ0",
+   authDomain: "content-pipeline-36dbf.firebaseapp.com",
+   projectId: "content-pipeline-36dbf",
+   appId: "1:706373536416:web:f492bfe28d3fce533317c5"
+};
+
+const B = window.BRIDGE;
+const el = id => document.getElementById(id);
+const show = (id,on) => { const e = el(id); if(e) e.style.display = on ? "block" : "none"; };
+
+if(!FIREBASE_CONFIG.projectId){
+  B.setStatus("Sync off — this device only");
+  show("sync-setup", true);
+} else {
+  const [{ initializeApp }, auth_, fs_] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js"),
+    import("https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js")
+  ]);
+  const { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+          createUserWithEmailAndPassword, signOut, setPersistence,
+          browserLocalPersistence } = auth_;
+  const { getFirestore, doc, onSnapshot, setDoc, getDoc } = fs_;
+
+  const app  = initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+  await setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+  let ref = null, stop = null, firstSnap = true, pending = null, pushTimer = null;
+
+  const msg = (txt,ms=3000) => { const e=el("sync-msg"); if(!e) return;
+    e.textContent = txt; if(ms) setTimeout(()=>{ if(e.textContent===txt) e.textContent=""; }, ms); };
+
+  const stamp = () => { const d=new Date();
+    return d.getHours()%12 + ":" + String(d.getMinutes()).padStart(2,"0") + (d.getHours()<12?"am":"pm"); };
+
+  async function push(){
+    if(!ref) return;
+    const st = B.getState();
+    try{
+      await setDoc(ref, { data: JSON.stringify(st), rev: st.rev||0, at: Date.now() });
+      B.setStatus("Synced "+stamp(), "good");
+    }catch(e){ B.setStatus("Sync failed — still saved on this device", "bad"); }
+  }
+
+  B.onLocalChange = () => {
+    if(!ref) return;
+    B.setStatus("Syncing…");
+    clearTimeout(pushTimer); pushTimer = setTimeout(push, 1200);
+  };
+
+  function attach(uid){
+    ref = doc(db, "pipelines", uid);
+    firstSnap = true;
+    stop = onSnapshot(ref, snap => {
+      const local = B.getState(), lrev = B.getRev();
+      if(!snap.exists()){ push(); return; }
+      const d = snap.data();
+      let remote; try{ remote = JSON.parse(d.data); }catch(e){ return; }
+      const rrev = d.rev || 0;
+
+      if(firstSnap){
+        firstSnap = false;
+        const lc = (local.ideas||[]).length, rc = (remote.ideas||[]).length;
+        const differs = JSON.stringify(local.ideas||[]) !== JSON.stringify(remote.ideas||[]);
+        if(lc && rc && differs){
+          pending = remote; pending.rev = rrev;
+          el("sync-clash-txt").textContent =
+            "This device has "+lc+(lc===1?" card":" cards")+". The synced copy has "+rc+
+            (rc===1?" card":" cards")+". Pick which one to keep — the other is replaced.";
+          show("sync-clash", true);
+          B.setStatus("Waiting — two copies to reconcile", "bad");
+          return;
+        }
+      }
+      if(rrev > lrev){ B.applyRemote(remote); B.setStatus("Updated from your other device "+stamp(), "good"); }
+      else if(lrev > rrev){ push(); }
+      else B.setStatus("Synced "+stamp(), "good");
+    }, () => B.setStatus("Sync offline — still saved on this device", "bad"));
+  }
+
+  el("clash-local").onclick = () => { pending=null; show("sync-clash",false); push(); };
+  el("clash-remote").onclick = () => {
+    if(pending){ B.applyRemote(pending); pending=null; }
+    show("sync-clash",false); B.setStatus("Synced "+stamp(), "good");
+  };
+  el("sync-push").onclick = () => push();
+
+  onAuthStateChanged(auth, user => {
+    if(stop){ stop(); stop=null; }
+    show("sync-signin", !user); show("sync-on", !!user); show("sync-clash", false);
+    if(user){ B.setStatus("Connecting…"); attach(user.uid); }
+    else { ref=null; B.setStatus("Signed out — this device only"); }
+  });
+
+  const creds = () => [el("sync-email").value.trim(), el("sync-pass").value];
+  const fail = e => msg((e.code||"").replace("auth/","").replace(/-/g," ") || "sign-in failed", 5000);
+
+  el("sync-in").onclick = async () => {
+    const [e,pw] = creds(); if(!e||!pw) return msg("email and password needed");
+    msg("signing in…", 0);
+    try{ await signInWithEmailAndPassword(auth,e,pw); msg("signed in"); el("sync-pass").value=""; }
+    catch(err){ fail(err); }
+  };
+  el("sync-new").onclick = async () => {
+    const [e,pw] = creds(); if(!e||pw.length<6) return msg("password needs 6+ characters");
+    msg("creating…", 0);
+    try{ await createUserWithEmailAndPassword(auth,e,pw); msg("account created"); el("sync-pass").value=""; }
+    catch(err){ fail(err); }
+  };
+  el("sync-out").onclick = () => signOut(auth);
+}
 </script>
 </body>
 </html>
