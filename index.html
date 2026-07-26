@@ -362,7 +362,35 @@ function refreshGate(i, cardEl){
   g.innerHTML = gateText(i);
 }
 
-/* ---- nav ---- */
+/* Plain text for a teleprompter app: opening line, then one beat per line. */
+function tprompt(i){
+  const B = beatsOf(i).filter(b=>(b.t||"").trim());
+  const head = (i.hook||"").trim();
+  const first = B.length ? B[0].t.trim() : "";
+  const lines = [];
+  if(head && head.toLowerCase() !== first.toLowerCase()) lines.push(head, "");
+  B.forEach(b=>{
+    lines.push("- "+b.t.trim());
+    if((b.d||"").trim()) lines.push("   > "+b.d.trim());
+    lines.push("");
+  });
+  return lines.join("\n").trim();
+}
+
+/* Clipboard with a fallback for browsers that block the API on this page. */
+async function copyText(txt, msgEl, nearEl){
+  try{
+    await navigator.clipboard.writeText(txt);
+    if(msgEl) msgEl.textContent = "copied";
+    setTimeout(()=>{ if(msgEl) msgEl.textContent=""; }, 2000);
+    return;
+  }catch(e){}
+  if(msgEl) msgEl.textContent = "select and copy below";
+  const ta = document.createElement("textarea");
+  ta.value = txt; ta.className = "mono";
+  ta.style.cssText = "width:100%;min-height:150px;margin-top:8px;font-size:13px";
+  (nearEl||document.body).after(ta); ta.focus(); ta.select();
+}
 document.querySelectorAll(".clip").forEach(c=>c.onclick=()=>{
   document.querySelectorAll(".clip").forEach(x=>x.classList.toggle("on",x===c));
   document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="s-"+c.dataset.p));
@@ -450,6 +478,8 @@ function card(i){
       ${(i.shots||[]).map((s,x)=>`<label class="check${s.done?" done":""}">
         <input type="checkbox" data-act="shotdone" data-id="${i.id}" data-k="${x}"${s.done?" checked":""}>
         <span>${esc(s.t)}</span></label>`).join("")||`<div style="font-size:13px;color:var(--muted)">No shots listed.</div>`}
+      <div class="row"><button class="tiny" data-act="tp" data-id="${i.id}">Copy for teleprompter</button>
+      <span class="count" id="tp-${i.id}"></span></div>
       <div class="row"><button class="tiny" data-act="to-ship" data-id="${i.id}">Filmed → Ship</button>
       <button class="ghost tiny" data-act="back" data-id="${i.id}">Back to Batch</button>
       <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
@@ -541,6 +571,7 @@ document.body.addEventListener("click", e=>{
   else if(a==="del") S.ideas = S.ideas.filter(x=>x.id!==i.id);
   else if(a==="beats"){ open[i.id]=!open[i.id]; render(); return; }
   else if(a==="shots"){ openH[i.id]=!openH[i.id]; render(); return; }
+  else if(a==="tp"){ copyText(tprompt(i), el("tp-"+i.id), b.closest(".row")); return; }
   else if(a==="beatadd"){ i.beats=beatsOf(i); i.beats.push({g:"",t:"",d:""}); open[i.id]=true; save(); render();
     const f=document.querySelector(`[data-act="beattrig"][data-id="${i.id}"][data-k="${i.beats.length-1}"]`); if(f) f.focus(); return; }
   else if(a==="beatfmt"){ i.beats = GUIDE.map(g=>({g:g[0],t:"",d:""})); open[i.id]=true; save(); render(); return; }
