@@ -124,6 +124,20 @@ select{font-size:13px;padding:6px 8px}
 .check.done span{text-decoration:line-through;color:var(--muted)}
 .empty{border:1px dashed var(--line);border-radius:var(--r);padding:22px 14px;text-align:center;color:var(--muted);font-size:14px}
 .count{font:400 11px/1 "IBM Plex Mono",monospace;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:50;
+  background:var(--ink);color:var(--paper);border-radius:var(--r);padding:10px 12px;
+  display:none;align-items:center;gap:12px;box-shadow:0 4px 18px rgba(0,0,0,.22);max-width:92vw}
+.toast.show{display:flex}
+.toast span{font-size:14px}
+.toast button{background:transparent;border:1px solid rgba(255,255,255,.4);color:var(--paper);
+  font:600 13px/1 "Public Sans",sans-serif;padding:7px 11px}
+.search{margin:0 0 16px}
+.search input{font-size:15px}
+.hits{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grade);
+  text-transform:uppercase;margin-top:6px;display:block}
+.spark-q{font-family:"Bricolage Grotesque",sans-serif;font-weight:600;font-size:19px;
+  line-height:1.3;margin:4px 0 12px;min-height:2.4em;display:flex;align-items:center}
+.spark-q.idle{font-family:"Public Sans",sans-serif;font-weight:400;font-size:14px;color:var(--muted)}
 .gate{font:400 12px/1.35 "Public Sans",sans-serif;color:var(--muted);margin-top:7px}
 .gate b{color:var(--ink);font-weight:600}
 footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size:12px;color:var(--muted)}
@@ -149,6 +163,11 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
   <div class="count" id="save-state" style="padding:5px 2px 1px">checking storage…</div>
 </nav>
 
+<div class="search">
+  <input type="text" id="q" placeholder="Search every card — topic, beats, shots, captions">
+  <span class="hits" id="hits"></span>
+</div>
+
 <!-- ============ CAPTURE ============ -->
 <section id="s-capture" class="on">
   <div class="phase-head"><span class="n">01</span><h2>Capture</h2></div>
@@ -167,6 +186,16 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
       <input type="text" id="i-note" placeholder="the detail you don't want to forget">
     </div>
     <div class="row"><button id="add">Add idea</button></div>
+  </div>
+
+  <div class="panel">
+    <h3>Stuck? Draw a prompt</h3>
+    <select id="spark-pillar"></select>
+    <div class="spark-q idle" id="spark-q">Pick a pillar and draw — one question at a time, no repeats until the pool runs out.</div>
+    <div class="row">
+      <button class="tiny" id="spark-draw">Draw a prompt</button>
+      <button class="ghost tiny" id="spark-use" disabled style="opacity:.35">Use this ↑</button>
+    </div>
   </div>
 
   <div class="cards" id="list-capture"></div>
@@ -235,6 +264,8 @@ footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size
 <footer>Saves automatically in this artifact. Ideas move Capture → Batch → Ship → Posted.</footer>
 </div>
 
+<div class="toast" id="toast"><span id="toast-msg"></span><button id="undo">Undo</button></div>
+
 <script>
 const PILLARS = ["Unsorted","Motivational","Story time","Lesbian fashion",
   "Relatable / funny / conversational","Fingerboarding"];
@@ -247,6 +278,104 @@ const FOOTAGE = [
 ];
 
 /* Suggested shape only — beats are free-form. "Use this format" seeds these five. */
+/* Prompt bank. Every question is answerable in one specific memory —
+   nothing that invites a general opinion, because general gets boring on camera. */
+const SPARKS = {
+"Motivational":[
+ "What's something you're better at now than a year ago that nobody noticed?",
+ "What advice did you ignore that you now give other people?",
+ "What's the smallest change you made that had the biggest effect?",
+ "Who did you used to measure yourself against, and what changed?",
+ "What did quitting something teach you that sticking with it wouldn't have?",
+ "What's a compliment you got that you didn't believe at the time?",
+ "What would you tell someone on day one of the thing you're years into?",
+ "What were you told you couldn't do that you can do now?",
+ "What's a hard stretch you got through that you'd half forgotten until now?",
+ "What do you do on the days you don't feel like it?",
+ "What's a standard you hold yourself to that costs you something?",
+ "What did you have to stop doing before things got better?",
+ "What's the last thing you were proud of that you never told anyone?",
+ "What are you still bad at, and why do you keep doing it anyway?",
+ "Who believed you before you believed yourself?",
+ "What's something that felt like failure at the time and doesn't now?"
+],
+"Story time":[
+ "What's the last thing a kid said to you that you weren't ready for?",
+ "What's a moment at work you were still thinking about a week later?",
+ "What's the closest you've come to walking out of a job?",
+ "When were you completely wrong about someone?",
+ "What's a small thing that went wrong and then snowballed?",
+ "What's the most awkward thing that's happened to you in public?",
+ "What's a story your family tells about you that you'd tell differently?",
+ "When did you last cry somewhere you really shouldn't have?",
+ "What did you do as a kid that makes total sense to you now?",
+ "What's the strangest interaction you've had with a stranger?",
+ "When's the last time you got caught doing something?",
+ "What's a rule you broke that you'd break again?",
+ "What day started completely normal and ended nothing like you expected?",
+ "Who did you lose touch with that you still think about?",
+ "When's the last time you were genuinely scared?",
+ "What's the pettiest revenge you've ever taken?",
+ "What's something you said out loud that you'd take back?",
+ "What's a job you had that you'd never do again?"
+],
+"Lesbian fashion":[
+ "What's the first thing you wore that made you feel like yourself?",
+ "What do you own that you'd replace the same day if you lost it?",
+ "What trend did you try that was absolutely not for you?",
+ "How has the way you dress changed in the last five years?",
+ "What's the hardest thing for you to shop for, and why?",
+ "What do people get wrong about the way you dress?",
+ "What's your most-worn piece and how long have you had it?",
+ "Where do you actually shop, and what can you never find there?",
+ "What would you wear every single day if you could get away with it?",
+ "How different is what you wear for work from the rest of your life?",
+ "What did you wear when you wanted to disappear, versus now?",
+ "What did you buy that sat in your closet a year before it clicked?",
+ "What's the fit problem that ruins otherwise good clothes for you?",
+ "Whose style would you steal outright?",
+ "What do you keep buying slightly different versions of?",
+ "What's a piece you were talked out of that you still think about?"
+],
+"Relatable / funny / conversational":[
+ "What's the pettiest thing that ruined your morning?",
+ "What's a rule you follow that nobody asked you to follow?",
+ "What did you spend money on this month that you'd defend to anyone?",
+ "What opinion of yours reliably starts an argument?",
+ "What does everyone like that you're done pretending about?",
+ "What's the dumbest thing you've argued about recently?",
+ "What habit would you be embarrassed for people to watch you do?",
+ "What's an inconvenience you've fully accepted instead of just fixing?",
+ "What do you do that you know is unhinged and you're not stopping?",
+ "What's the most unnecessary thing you own that you love?",
+ "What small thing puts you in a bad mood instantly?",
+ "What's your most controversial food take?",
+ "What are you weirdly territorial about?",
+ "When's the last time you overreacted and knew it while it was happening?",
+ "What are you irrationally good at?",
+ "What's a thing everyone else seems to find easy that you don't?",
+ "What do you lie about in small talk?"
+],
+"Fingerboarding":[
+ "What was your first setup and what happened to it?",
+ "What trick took you the longest to land?",
+ "What's the most overrated piece of gear in this hobby?",
+ "What would you tell someone spending their first hundred dollars?",
+ "What setup do you regret buying?",
+ "What do people outside the hobby always ask you?",
+ "How different is your first deck from what you ride now?",
+ "What skill from this transferred somewhere you didn't expect?",
+ "What's your actual daily driver right now?",
+ "What's the cheapest thing that improved your riding the most?",
+ "What brand were you skeptical of that won you over?",
+ "What do you practice when you don't feel like practicing?",
+ "What's the most you've spent on something this small?",
+ "Where do you actually ride, and what makes a spot good?",
+ "What do beginners obsess over that turns out not to matter?",
+ "What's something about this hobby that's hard to explain to people?"
+]
+};
+
 const glabel = (b,x) => x===0 ? "Hook" : (b.g||"");
 const GUIDE = [
   ["Hook","the line that stops the scroll"],
@@ -277,7 +406,9 @@ GRADE IN CAPCUT — in this order
 (Replace these with your exact numbers — this is a placeholder.)`;
 
 const KEY = "pipeline:v1";
-let S = null, filter = "all", open = {}, openH = {}, MODE = "checking";
+let S = null, filter = "all", q = "", open = {}, openH = {}, MODE = "checking";
+let trash = null, trashTimer = null;
+let sparkQueue = [], sparkCurrent = "";
 
 function fresh(){
   return { ideas: [], grading: DEFAULT_GRADING, review:"" };
@@ -352,6 +483,10 @@ const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;
 const beatsOf = i => Array.isArray(i.beats) ? i.beats : [];
 const done = i => beatsOf(i).filter(b=>(b.t||"").trim()).length;
 const topicOf = i => (i.topic || i.hook || "").trim();
+const haystack = i => [topicOf(i), i.note, i.cat, i.caption,
+  ...beatsOf(i).flatMap(b=>[b.t,b.d]), ...(i.shots||[]).map(s=>s.t)
+].filter(Boolean).join(" ").toLowerCase();
+const matches = i => !q || haystack(i).includes(q);
 const isReady = i => done(i)>0 && (i.shots||[]).length>0;
 const gateText = i => {
   const missing = [];
@@ -498,6 +633,8 @@ function card(i){
         <label class="f">Caption</label>
         <textarea data-act="captionbox" data-id="${i.id}" style="min-height:70px" placeholder="Write it now, not while you're staring at the upload screen.">${esc(i.caption||"")}</textarea>
       </div>
+      <div class="row"><button class="tiny" data-act="cap" data-id="${i.id}"${(i.caption||"").trim()?"":" disabled style=\"opacity:.35;cursor:default\""}>Copy caption</button>
+      <span class="count" id="cap-${i.id}"></span></div>
       <div class="row"><button class="tiny" data-act="posted" data-id="${i.id}">Mark posted</button>
       <button class="ghost tiny" data-act="back" data-id="${i.id}">Back to Batch</button></div>`;
   }
@@ -505,6 +642,7 @@ function card(i){
     body = `${(i.caption||"").trim()?`<div class="note" style="white-space:pre-wrap">${esc(i.caption)}</div>`:""}
       <div style="margin-top:6px"><label class="f">Posted on</label>
       <input type="date" data-act="pdate" data-id="${i.id}" value="${esc(i.posted||"")}"></div>
+      <div class="row">${(i.caption||"").trim()?`<button class="ghost tiny" data-act="cap" data-id="${i.id}">Copy caption</button><span class="count" id="cap-${i.id}"></span>`:""}</div>
       <div class="row"><button class="ghost tiny" data-act="back" data-id="${i.id}">Back to Batch</button>
       <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
   }
@@ -516,11 +654,14 @@ function card(i){
 }
 
 function render(){
-  const by = s => S.ideas.filter(i=>i.stage===s);
+  const by = st => S.ideas.filter(i=>i.stage===st && matches(i));
   el("list-capture").innerHTML = by("capture").map(card).join("") ||
     `<div class="empty">Nothing captured yet. Add a hook the second it occurs to you — you will not remember it later.</div>`;
 
   const f = el("filter");
+  const sp = el("spark-pillar");
+  if(sp.options.length===0) sp.innerHTML = `<option value="all">Any pillar</option>`+
+    Object.keys(SPARKS).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
   const ip = el("i-pillar");
   if(ip.options.length===0) ip.innerHTML = PILLARS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
   if(f.options.length===0){ f.innerHTML = `<option value="all">All pillars</option>`+
@@ -554,17 +695,57 @@ function render(){
   });
   el("ready-plan").innerHTML = plan || `<p style="font-size:14px;color:var(--muted)">Nothing ready to film yet.</p>`;
 
-  const shipped = S.ideas.filter(i=>i.stage==="ship"||i.stage==="posted")
+  const shipped = S.ideas.filter(i=>(i.stage==="ship"||i.stage==="posted") && matches(i))
     .sort((a,b)=> (a.stage===b.stage) ? String(b.posted||"").localeCompare(String(a.posted||"")) : (a.stage==="ship"?-1:1));
   el("list-ship").innerHTML = shipped.map(card).join("") ||
     `<div class="empty">Nothing filmed yet. Move an idea over once it's shot.</div>`;
 
+  if(q){
+    const n = S.ideas.filter(matches).length;
+    el("hits").textContent = n+(n===1?" card matches":" cards match");
+  } else el("hits").textContent = "";
   el("c-capture").textContent = by("capture").length+" waiting";
   el("c-batch").textContent = by("batch").length+" to shape";
   el("c-ready").textContent = all.length+" to film";
   el("c-ship").textContent = by("ship").length+" to post";
   el("grading").value = S.grading; el("review").value = S.review;
 }
+
+/* ---- undo ---- */
+el("undo").addEventListener("click", ()=>{
+  if(!trash) return;
+  S.ideas.splice(Math.max(0,trash.at), 0, trash.idea);
+  trash = null; clearTimeout(trashTimer);
+  el("toast").classList.remove("show"); save(); render();
+});
+
+/* ---- spark prompts ---- */
+function sparkPool(){
+  const v = el("spark-pillar").value;
+  return v==="all" ? Object.values(SPARKS).flat() : (SPARKS[v]||[]);
+}
+function drawSpark(){
+  if(!sparkQueue.length){
+    sparkQueue = sparkPool().slice();
+    for(let x=sparkQueue.length-1;x>0;x--){ const j=Math.floor(Math.random()*(x+1)); [sparkQueue[x],sparkQueue[j]]=[sparkQueue[j],sparkQueue[x]]; }
+    if(sparkQueue.length>1 && sparkQueue[0]===sparkCurrent) sparkQueue.push(sparkQueue.shift());
+  }
+  sparkCurrent = sparkQueue.shift() || "";
+  const box = el("spark-q");
+  box.textContent = sparkCurrent; box.classList.remove("idle");
+  el("spark-draw").textContent = "Another";
+  const use = el("spark-use"); use.disabled = false; use.style.opacity = "";
+}
+el("spark-draw").addEventListener("click", drawSpark);
+el("spark-pillar").addEventListener("change", ()=>{ sparkQueue = []; drawSpark(); });
+el("spark-use").addEventListener("click", ()=>{
+  if(!sparkCurrent) return;
+  el("i-topic").value = sparkCurrent;
+  const pv = el("spark-pillar").value;
+  if(pv !== "all") el("i-pillar").value = pv;
+  el("i-topic").focus();
+  el("i-topic").scrollIntoView({behavior:"smooth", block:"center"});
+});
 
 /* ---- delegated events ---- */
 document.body.addEventListener("click", e=>{
@@ -577,9 +758,17 @@ document.body.addEventListener("click", e=>{
   else if(a==="back") i.stage="batch";
   else if(a==="posted"){ i.stage="posted"; if(!i.posted){ const d=new Date();
     i.posted = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); } }
-  else if(a==="del") S.ideas = S.ideas.filter(x=>x.id!==i.id);
+  else if(a==="del"){
+    trash = {idea:i, at:S.ideas.indexOf(i)};
+    S.ideas = S.ideas.filter(x=>x.id!==i.id);
+    el("toast-msg").textContent = "Deleted \u201c"+topicOf(i).slice(0,32)+"\u201d";
+    el("toast").classList.add("show");
+    clearTimeout(trashTimer);
+    trashTimer = setTimeout(()=>{ trash=null; el("toast").classList.remove("show"); }, 12000);
+  }
   else if(a==="beats"){ open[i.id]=!open[i.id]; render(); return; }
   else if(a==="shots"){ openH[i.id]=!openH[i.id]; render(); return; }
+  else if(a==="cap"){ copyText((i.caption||"").trim(), el("cap-"+i.id), b.closest(".row")); return; }
   else if(a==="tp"){ copyText(tprompt(i), el("tp-"+i.id), b.closest(".row")); return; }
   else if(a==="beatadd"){ i.beats=beatsOf(i); i.beats.push({g:"",t:"",d:""}); open[i.id]=true; save(); render();
     const f=document.querySelector(`[data-act="beattrig"][data-id="${i.id}"][data-k="${i.beats.length-1}"]`); if(f) f.focus(); return; }
@@ -612,7 +801,11 @@ document.body.addEventListener("change", e=>{
 document.body.addEventListener("input", e=>{
   const t = e.target;
   if(t.dataset.act==="captionbox"){
-    const i = S.ideas.find(x=>x.id===t.dataset.id); i.caption = t.value; save(); return;
+    const i = S.ideas.find(x=>x.id===t.dataset.id); i.caption = t.value; save();
+    const cb = t.closest(".idea").querySelector('[data-act="cap"]');
+    if(cb){ const ok = !!t.value.trim(); cb.disabled = !ok;
+      cb.style.opacity = ok?"":".35"; cb.style.cursor = ok?"":"default"; }
+    return;
   }
   if(t.dataset.act==="beatdetail"){
     const i = S.ideas.find(x=>x.id===t.dataset.id); beatsOf(i)[+t.dataset.k].d = t.value; save(); return;
@@ -636,6 +829,7 @@ document.body.addEventListener("keydown", e=>{
   }
 });
 el("filter").onchange = e => { filter = e.target.value; render(); };
+el("q").oninput = e => { q = e.target.value.trim().toLowerCase(); render(); };
 el("save-grade").onclick = ()=>{ S.grading = el("grading").value; save();
   el("grade-saved").textContent="saved"; setTimeout(()=>el("grade-saved").textContent="",1600); };
 el("save-review").onclick = ()=>{ S.review = el("review").value; save(); };
