@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Capture · Batch · Ready · Ship</title>
 <link rel="manifest" href="manifest.webmanifest">
+<script src="firebase-config.js"></script>
 <meta name="theme-color" content="#17191A">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -288,7 +289,7 @@ if("serviceWorker" in navigator){
     <div class="count" id="sync-state" style="margin-bottom:10px">checking…</div>
 
     <div id="sync-setup" style="display:none">
-      <p style="font-size:14px;color:var(--muted)">Not configured yet. Paste your Firebase settings into the marked block near the bottom of index.html.</p>
+      <p style="font-size:14px;color:var(--muted)">Not configured. Add your Firebase settings to firebase-config.js in the same folder as this page.</p>
     </div>
 
     <div id="sync-signin" style="display:none">
@@ -1020,23 +1021,19 @@ load();
 </script>
 
 <!-- ============================================================
-     SYNC  —  paste your Firebase settings between the brackets.
-     Firebase console → Project settings → Your apps → Web app → Config.
-     Leave it as-is and the app just runs offline on this device.
+     SYNC — settings live in firebase-config.js, NOT in this file.
+     That way this file can be replaced without touching your keys.
      ============================================================ -->
 <script type="module">
-const FIREBASE_CONFIG = {
-   apiKey: "AIzaSyCEitxdKFPDDOLMObRFKVoVM9eFohjBeQ0",
-   authDomain: "content-pipeline-36dbf.firebaseapp.com",
-   projectId: "content-pipeline-36dbf",
-   appId: "1:706373536416:web:f492bfe28d3fce533317c5"
-};
+const FIREBASE_CONFIG = window.FIREBASE_CONFIG || {};
 
 const B = window.BRIDGE;
 const el = id => document.getElementById(id);
 const show = (id,on) => { const e = el(id); if(e) e.style.display = on ? "block" : "none"; };
 
-if(!FIREBASE_CONFIG.projectId){
+const unset = !FIREBASE_CONFIG.projectId ||
+  Object.values(FIREBASE_CONFIG).some(v => String(v).includes("PASTE_YOURS"));
+if(unset){
   B.setStatus("Sync off — this device only");
   show("sync-setup", true);
 } else {
