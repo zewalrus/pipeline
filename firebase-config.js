@@ -14,8 +14,9 @@
    ============================================================ */
 
 window.FIREBASE_CONFIG = {
-  apiKey: "PASTE_YOURS",
-  authDomain: "PASTE_YOURS.firebaseapp.com",
-  projectId: "PASTE_YOURS",
-  appId: "PASTE_YOURS"
+  apiKey: "AIzaSyCEitxdKFPDDOLMObRFKVoVM9eFohjBeQ0",
+  authDomain: "content-pipeline-36dbf.firebaseapp.com",
+  projectId: "content-pipeline-36dbf",
+  appId: "1:706373536416:web:f492bfe28d3fce533317c5
+"
 };
