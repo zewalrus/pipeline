@@ -705,9 +705,12 @@ function card(i){
         <button class="ghost tiny" data-act="beats" data-id="${i.id}">${open[i.id]?"Hide beat sheet":"Beat sheet"} ${B.length?n+"/"+B.length:""}</button>
         <button class="ghost tiny" data-act="shots" data-id="${i.id}">${openH[i.id]?"Hide shots":"Shots"} ${(i.shots||[]).length||""}</button>
         <button class="tiny" data-act="to-ready" data-id="${i.id}"${isReady(i)?"":" disabled style=\"opacity:.35;cursor:default\""}>Ready to film →</button>
-        <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button>
       </div>
       ${isReady(i)?"":`<div class="gate">${gateText(i)}</div>`}
+      <div class="row">
+        <button class="ghost tiny" data-act="to-capture" data-id="${i.id}">Back to Capture</button>
+        <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button>
+      </div>
       <div class="beats${open[i.id]?" open":""}">
         <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">BEAT SHEET</div>
         <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Beat 01 is always your hook — say that one how you'd actually say it. Everything after is keywords only, 2–5 words.</div>
@@ -904,6 +907,7 @@ document.body.addEventListener("click", e=>{
     i.stage="batch";
   }
   else if(a==="to-ready"){ if(!isReady(i)) return; i.stage="ready"; }
+  else if(a==="to-capture") i.stage="capture";
   else if(a==="to-ship") i.stage="ship";
   else if(a==="back") i.stage="batch";
   else if(a==="posted"){ i.stage="posted"; if(!i.posted){ const d=new Date();
