@@ -17,6 +17,6 @@ window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyCEitxdKFPDDOLMObRFKVoVM9eFohjBeQ0",
   authDomain: "content-pipeline-36dbf.firebaseapp.com",
   projectId: "content-pipeline-36dbf",
-  appId: "1:706373536416:web:f492bfe28d3fce533317c5
-"
+  appId: "1:706373536416:web:f492bfe28d3fce533317c5"
+
 };
