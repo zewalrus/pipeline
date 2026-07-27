@@ -289,7 +289,7 @@ if("serviceWorker" in navigator){
     <div class="count" id="sync-state" style="margin-bottom:10px">checking…</div>
 
     <div id="sync-setup" style="display:none">
-      <p style="font-size:14px;color:var(--muted)">Not configured. Add your Firebase settings to firebase-config.js in the same folder as this page.</p>
+      <p style="font-size:14px;color:var(--grade)" id="sync-why"></p>
     </div>
 
     <div id="sync-signin" style="display:none">
@@ -1031,11 +1031,23 @@ const B = window.BRIDGE;
 const el = id => document.getElementById(id);
 const show = (id,on) => { const e = el(id); if(e) e.style.display = on ? "block" : "none"; };
 
-const unset = !FIREBASE_CONFIG.projectId ||
-  Object.values(FIREBASE_CONFIG).some(v => String(v).includes("PASTE_YOURS"));
-if(unset){
-  B.setStatus("Sync off — this device only");
+/* Work out precisely what's wrong so the panel can say so. */
+let why = "";
+if(!window.FIREBASE_CONFIG){
+  why = "firebase-config.js didn't load, or it doesn't start with  window.FIREBASE_CONFIG =  "
+      + "The Firebase console gives you  const firebaseConfig = {...}  — that form won't work here. "
+      + "Also check the file sits next to index.html and is named exactly firebase-config.js.";
+} else {
+  const need = ["apiKey","authDomain","projectId","appId"];
+  const missing = need.filter(k => !FIREBASE_CONFIG[k]);
+  const left = need.filter(k => String(FIREBASE_CONFIG[k]||"").includes("PASTE_YOURS"));
+  if(missing.length) why = "firebase-config.js is missing: " + missing.join(", ");
+  else if(left.length) why = "Still says PASTE_YOURS in: " + left.join(", ");
+}
+if(why){
+  B.setStatus("Sync off — see below", "bad");
   show("sync-setup", true);
+  const box = el("sync-why"); if(box) box.textContent = why;
 } else {
   let initializeApp, auth_, fs_;
   try{
