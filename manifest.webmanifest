@@ -1,0 +1,16 @@
+{
+  "name": "Content Pipeline",
+  "short_name": "Pipeline",
+  "description": "Capture, Batch, Ready, Ship — topics, beat sheets and shot lists in one place.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E7E9E6",
+  "theme_color": "#17191A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
