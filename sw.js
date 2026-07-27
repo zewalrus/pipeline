@@ -1,11 +1,12 @@
 /* Bump VERSION on every deploy — it wipes the old cache and forces a refresh.
    Strategy is network-first on purpose: you always get the newest file when
    online, and the cache only steps in when there's no connection. */
-const VERSION = "pipeline-2026-07-27a";
+const VERSION = "pipeline-2026-07-27b";
 
 const SHELL = [
   "./",
   "./index.html",
+  "./firebase-config.js",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png"
