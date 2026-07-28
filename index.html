@@ -350,9 +350,13 @@ const FOOTAGE = [
 ];
 
 /* Suggested shape only — beats are free-form. "Use this format" seeds these five. */
-/* Two kinds of prompt. Story time and Fingerboarding pull a memory or an
-   experience. Everything else asks what you know that would help the viewer. */
+/* Three kinds of prompt. Story time and Fingerboarding pull a memory or an
+   experience. Motivation, Lesbian fashion, Relatable, and Spiritual ask what
+   you know that would help the viewer. Yapping just asks what's on your mind
+   — no lesson required. Combination has no bank; it's a mix, not a topic. */
 const MODES = {
+  "Spiritual":"What you actually know, sense, or have seen doing this work — teach it or tell it straight.",
+  "Yapping":"Whatever's living in your head right now. No lesson, no tidy wrap-up — just talk.",
   "Motivation":"For a woman who wants to create but doesn't believe she can yet — what does she need to hear?",
   "Story time":"Find the memory first. The point is the story, not the lesson.",
   "Lesbian fashion":"What do you know that would save someone time, money, or a bad purchase?",
@@ -361,6 +365,60 @@ const MODES = {
 };
 
 const SPARKS = {
+"Spiritual":[
+ "What's a sign people miss because they're waiting for something more dramatic?",
+ "What do you wish every skeptic understood before writing this off?",
+ "What's the most common thing people are actually asking about when they come to you?",
+ "What does trust your intuition actually mean, in a moment you can describe?",
+ "What's a reading you gave that you still think about?",
+ "What's the difference between a sign and wishful thinking?",
+ "What do you tell someone who's terrified to ask the question they actually want answered?",
+ "What's something about grief and the other side that would bring someone comfort?",
+ "What's a myth about psychics that you're tired of correcting?",
+ "How do you tell the difference between fear talking and intuition talking?",
+ "What's the first thing you'd teach someone who wants to start trusting their own gut?",
+ "What happens in your body or your head right before you know something?",
+ "What's a pattern you see over and over in the questions people bring you?",
+ "What would you tell someone who keeps asking when instead of what?",
+ "What's something the universe does that people mistake for coincidence?",
+ "What's a boundary you've had to set around this work?",
+ "What do you do when a reading doesn't land the way you expected?",
+ "What's something you believed early on about this work that you don't believe anymore?",
+ "What's a small daily practice that keeps you connected to this?",
+ "What do dreams actually tell people, versus what they think dreams are telling them?",
+ "What's the difference between manifesting and denial?",
+ "What's something people do that blocks their own intuition without realizing it?",
+ "What's a moment you knew something was true before you had any proof?",
+ "What would you say to someone who got a reading that scared them?",
+ "What's your actual process for protecting your energy before or after a reading?",
+ "What do you tell someone who can't let go of wanting closure from a person who's gone?"
+],
+"Yapping":[
+ "What's something you changed your mind about recently, and why?",
+ "What's a small thing that's been living in your head rent-free this week?",
+ "What's a hot take you'll actually defend if someone pushes back?",
+ "What's something everyone seems to be into right now that you just don't get?",
+ "What's a rule you think about breaking every single day?",
+ "What's something you do that you know is a little unhinged but you're not stopping?",
+ "What's a conversation you had recently that you're still thinking about?",
+ "What's something people say all the time that makes no sense if you actually think about it?",
+ "What's a thing you used to think was normal that you now realize wasn't?",
+ "What's something you're weirdly competitive about?",
+ "What's a trend you refuse to participate in?",
+ "What's something that happened today you'd text a friend about right now?",
+ "What's an opinion you have that you know will get you in trouble?",
+ "What's something you keep almost saying out loud in public and don't?",
+ "What's a thing you do that you can't actually explain the logic of?",
+ "What's something small that ruined your whole mood this week?",
+ "What's a thing you're embarrassingly good at for no reason?",
+ "What's something you overheard recently that you can't stop thinking about?",
+ "What's a phase you went through that you have zero regrets about?",
+ "What's a thing people assume about you that's completely wrong?",
+ "What's something you do differently from literally everyone you know?",
+ "What's a thought you had at 2am that you still think is right?",
+ "What's something you're currently annoyed about that's honestly kind of petty?",
+ "What's a random skill or fact you have that has never once been useful?"
+],
 "Motivation":[
  "What's the first thing you'd tell someone who has ideas but hasn't posted yet?",
  "What does a beginner overthink that stops mattering after ten videos?",
