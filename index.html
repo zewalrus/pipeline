@@ -139,6 +139,10 @@ select{font-size:13px;padding:6px 8px}
 .check{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:14px;cursor:pointer}
 .check input{margin-top:3px;width:16px;height:16px;accent-color:var(--grade);flex:none}
 .check.done span{text-decoration:line-through;color:var(--muted)}
+.shot-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.shot-row:last-of-type{border-bottom:none}
+.shot-row .check{flex:1 1 200px;padding:0;min-width:0}
+.shot-row select{flex:none;font-size:12px;padding:4px 6px;max-width:170px}
 .empty{border:1px dashed var(--line);border-radius:var(--r);padding:22px 14px;text-align:center;color:var(--muted);font-size:14px}
 .count{font:400 11px/1 "IBM Plex Mono",monospace;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:50;
@@ -332,11 +336,12 @@ if("serviceWorker" in navigator){
 <script>
 const PILLARS = ["Channeled Message","Motivation","Tutorial","Myth Busting","Ranking","List"];
 
+/* Lives on the shot, not the idea — a talking-head video just has no shots
+   to categorize, so there's no "talking head" option here. */
 const FOOTAGE = [
-  ["","Footage type — not set"],
+  ["","Type — not set"],
   ["evidence","Evidence shot (receipt, chewed cords, screenshot)"],
-  ["anchor","Anchor footage (GRWM, driving, errands — voiceover on top)"],
-  ["talking","Talking head only"]
+  ["anchor","Anchor footage (GRWM, driving, errands — voiceover on top)"]
 ];
 
 /* Suggested shape only — beats are free-form. "Use this format" seeds these five. */
@@ -650,6 +655,7 @@ const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;
 const beatsOf = i => Array.isArray(i.beats) ? i.beats : [];
 const done = i => beatsOf(i).filter(b=>(b.t||"").trim()).length;
 const topicOf = i => (i.topic || i.hook || "").trim();
+const ftLabel = v => v ? (FOOTAGE.find(f=>f[0]===v)||["",""])[1].split(" (")[0] : "";
 const haystack = i => [topicOf(i), i.note, i.cat, i.caption,
   ...beatsOf(i).flatMap(b=>[b.t,b.d]), ...(i.shots||[]).map(s=>s.t)
 ].filter(Boolean).join(" ").toLowerCase();
@@ -710,13 +716,13 @@ el("add").onclick = ()=>{
   const h = el("i-topic").value.trim(); if(!h) return;
   S.ideas.unshift({id:"i"+Date.now(), topic:h, note:el("i-note").value.trim(),
     cat:el("i-pillar").value||"Channeled Message",
-    footage:"", beats:[], checks:{}, stage:"batch", created:Date.now()});
+    beats:[], shots:[], checks:{}, stage:"batch", created:Date.now()});
   el("i-topic").value=""; el("i-note").value=""; el("i-pillar").value="Channeled Message"; save(); render();
   showTab("batch");
 };
 
 function card(i){
-  const sel = (name,opts,val)=>`<select data-act="${name}" data-id="${i.id}">`+
+  const sel = (name,opts,val,k)=>`<select data-act="${name}" data-id="${i.id}"${k!==undefined?` data-k="${k}"`:""}>`+
     opts.map(o=>{const v=Array.isArray(o)?o[0]:o, l=Array.isArray(o)?o[1]:o;
       return `<option value="${esc(v)}"${v===val?" selected":""}>${esc(l)}</option>`}).join("")+`</select>`;
 
@@ -734,7 +740,7 @@ function card(i){
   }
   if(i.stage==="batch"){
     const B = beatsOf(i), n = done(i), segs = B.length || 5;
-    body = `<div class="selects">${sel("cat",PILLARS,i.cat)}${sel("footage",FOOTAGE,i.footage)}</div>
+    body = `<div class="selects">${sel("cat",PILLARS,i.cat)}</div>
       <div class="strip">${Array.from({length:segs},(_,x)=>`<div class="seg${x<n?" done":""}"></div>`).join("")}</div>
       <div class="row">
         <button class="ghost tiny" data-act="beats" data-id="${i.id}">${open[i.id]?"Hide beat sheet":"Beat sheet"} ${B.length?n+"/"+B.length:""}</button>
@@ -776,9 +782,13 @@ function card(i){
       <div class="beats${openH[i.id]?" open":""}">
         <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">SHOT LIST</div>
         <div style="font-size:12px;color:var(--muted);margin:3px 0 8px">Name the actual shot, not the category. "Rabbit chewing the baseboard behind my desk," not "b-roll."</div>
-        ${(i.shots||[]).map((s,x)=>`<label class="check${s.done?" done":""}">
-          <input type="checkbox" data-act="shotdone" data-id="${i.id}" data-k="${x}"${s.done?" checked":""}>
-          <span>${esc(s.t)}</span></label>`).join("")||`<div style="font-size:13px;color:var(--muted);padding:4px 0">No shots listed yet.</div>`}
+        ${(i.shots||[]).map((s,x)=>`<div class="shot-row">
+          <label class="check${s.done?" done":""}">
+            <input type="checkbox" data-act="shotdone" data-id="${i.id}" data-k="${x}"${s.done?" checked":""}>
+            <span>${esc(s.t)}</span>
+          </label>
+          ${sel("shotfootage",FOOTAGE,s.footage||"",x)}
+        </div>`).join("")||`<div style="font-size:13px;color:var(--muted);padding:4px 0">No shots listed yet.</div>`}
         <div style="margin-top:8px"><input type="text" id="shotin-${i.id}" data-act="shotenter" data-id="${i.id}" placeholder="Describe one shot, then add it"></div>
         <div class="row"><button class="ghost tiny" data-act="shotadd" data-id="${i.id}">Add shot</button>
         ${(i.shots||[]).length?`<button class="ghost tiny" data-act="shotclear" data-id="${i.id}">Clear filmed</button>`:""}</div>
@@ -824,11 +834,10 @@ function card(i){
       <div class="row"><button class="ghost tiny" data-act="back" data-id="${i.id}">Back to Batch</button>
       <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
   }
-  const ft = (FOOTAGE.find(f=>f[0]===i.footage)||["",""])[1];
   if(!head) head = `<div class="hook">${esc(topicOf(i))}</div>`+
     (i.note?`<div class="note">${esc(i.note)}</div>`:"");
   return `<article class="idea" data-stage="${i.stage}">${head}
-    <div class="meta">${esc(i.cat)}${i.footage?" · "+esc(ft.split(" (")[0]):""}${i.stage==="posted"?" · posted "+esc(i.posted||""):""}</div>
+    <div class="meta">${esc(i.cat)}${i.stage==="posted"?" · posted "+esc(i.posted||""):""}</div>
     ${body}</article>`;
 }
 
@@ -853,22 +862,23 @@ function render(){
     `<div class="empty">Nothing ready yet. A card moves here once it has beats written and shots listed.</div>`;
 
   const all = by("ready");
-  const LBL = {evidence:"Evidence shots",anchor:"Anchor footage",talking:"Talking head","":"Footage type not set"};
+  /* Footage lives on the shot now, not the idea, so the plan groups
+     individual unfilmed shots by type, then by the pillar of the card
+     they belong to — a card with nothing left to film just drops out. */
+  const LBL = {evidence:"Evidence shots",anchor:"Anchor footage","":"Type not set"};
   const lab = s => `font:500 10px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;color:${s}`;
   let plan = "";
-  ["evidence","anchor","talking",""].forEach(k=>{
-    const grp = all.filter(i=>i.footage===k); if(!grp.length) return;
+  ["evidence","anchor",""].forEach(k=>{
+    const grp = all.flatMap(i=>(i.shots||[]).filter(s=>!s.done && (s.footage||"")===k).map(s=>({s:s.t,h:topicOf(i),cat:i.cat})));
+    if(!grp.length) return;
     plan += `<div style="margin-bottom:14px">
-      <div style="${lab("var(--ink)")};margin-bottom:6px">${LBL[k].toUpperCase()} · ${grp.length} ${grp.length===1?"video":"videos"}</div>`;
+      <div style="${lab("var(--ink)")};margin-bottom:6px">${LBL[k].toUpperCase()} · ${grp.length} ${grp.length===1?"shot":"shots"}</div>`;
     PILLARS.forEach(p=>{
-      const sub = grp.filter(i=>i.cat===p); if(!sub.length) return;
+      const sub = grp.filter(o=>o.cat===p); if(!sub.length) return;
       plan += `<div style="margin:0 0 8px 10px;border-left:2px solid var(--line);padding-left:8px">
-        <div style="${lab("var(--mid)")};margin-bottom:4px">${esc(p.toUpperCase())} · ${sub.length}</div>`;
-      const shots = sub.flatMap(i=>(i.shots||[]).filter(s=>!s.done).map(s=>({s:s.t,h:topicOf(i)})));
-      plan += shots.length
-        ? shots.map(o=>`<div style="padding:3px 0;border-bottom:1px solid var(--line)">${esc(o.s)}<div style="font-size:11px;color:var(--muted)">${esc(o.h.slice(0,54))}</div></div>`).join("")
-        : `<div style="font-size:13px;color:var(--muted)">${sub.map(i=>esc(topicOf(i).slice(0,54))).join("<br>")}<div style="font-size:11px;margin-top:3px">No shots listed yet — open a card and add them.</div></div>`;
-      plan += `</div>`;
+        <div style="${lab("var(--mid)")};margin-bottom:4px">${esc(p.toUpperCase())} · ${sub.length}</div>`+
+        sub.map(o=>`<div style="padding:3px 0;border-bottom:1px solid var(--line)">${esc(o.s)}<div style="font-size:11px;color:var(--muted)">${esc(o.h.slice(0,54))}</div></div>`).join("")+
+        `</div>`;
     });
     plan += `</div>`;
   });
@@ -970,7 +980,7 @@ document.body.addEventListener("click", e=>{
   }
   else if(a==="shotadd"){
     const inp = el("shotin-"+i.id); const v = (inp?inp.value:"").trim(); if(!v) return;
-    i.shots = i.shots||[]; i.shots.push({t:v,done:false}); openH[i.id]=true; save(); render(); return;
+    i.shots = i.shots||[]; i.shots.push({t:v,done:false,footage:""}); openH[i.id]=true; save(); render(); return;
   }
   else if(a==="shotclear"){ i.shots = (i.shots||[]).filter(s=>!s.done); save(); render(); return; }
   else return;
@@ -980,7 +990,7 @@ document.body.addEventListener("change", e=>{
   const t = e.target, a = t.dataset.act; if(!a) return;
   const i = S.ideas.find(x=>x.id===t.dataset.id);
   if(a==="cat"){ i.cat=t.value; }
-  else if(a==="footage"){ i.footage=t.value; }
+  else if(a==="shotfootage"){ i.shots[t.dataset.k].footage = t.value; }
   else if(a==="check"){ i.checks[t.dataset.k]=t.checked; }
   else if(a==="shotdone"){ i.shots[t.dataset.k].done = t.checked; }
   else if(a==="pdate"){ i.posted = t.value; }
@@ -1020,7 +1030,7 @@ document.body.addEventListener("keydown", e=>{
     e.preventDefault();
     const i = S.ideas.find(x=>x.id===e.target.dataset.id); if(!i) return;
     const v = e.target.value.trim(); if(!v) return;
-    i.shots = i.shots||[]; i.shots.push({t:v,done:false}); save(); render();
+    i.shots = i.shots||[]; i.shots.push({t:v,done:false,footage:""}); save(); render();
   }
 });
 el("filter").onchange = e => { filter = e.target.value; render(); };
@@ -1030,8 +1040,8 @@ el("save-grade").onclick = ()=>{ S.grading = el("grading").value; save();
 el("save-review").onclick = ()=>{ S.review = el("review").value; save(); };
 
 el("export").onclick = async ()=>{
-  const line = i => `- ${topicOf(i)}\n    pillar: ${i.cat}\n    footage: ${i.footage||"not set"}\n`+
-    ((i.shots||[]).length?`    shots:\n`+i.shots.map(s=>`      [${s.done?"x":" "}] ${s.t}`).join("\n")+"\n":"")+
+  const line = i => `- ${topicOf(i)}\n    pillar: ${i.cat}\n`+
+    ((i.shots||[]).length?`    shots:\n`+i.shots.map(s=>`      [${s.done?"x":" "}] ${s.t}${ftLabel(s.footage)?" ("+ftLabel(s.footage)+")":""}`).join("\n")+"\n":"")+
     (beatsOf(i).length?`    BEAT SHEET:\n`+beatsOf(i).map((b,x)=>
       `      ${String(x+1).padStart(2,"0")}${glabel(b,x)?" "+glabel(b,x):""} — ${b.t||"..."}`+
       ((b.d||"").trim()?`\n           detail: ${b.d}`:"")).join("\n"):`    BEAT SHEET: (empty)`)+
