@@ -523,10 +523,8 @@ const SPARKS = {
 const glabel = (b,x) => x===0 ? "Hook" : (b.g||"");
 const GUIDE = [
   ["Hook","the line that stops the scroll"],
-  ["Scene","where and when, just enough to care"],
-  ["Turn","what went wrong, surprised you, or clicked"],
-  ["Moment","the one detail that makes it real"],
-  ["Landing","the joke, the meaning, or the question back"]
+  ["Retain","the reason they don't swipe away — build, tension, or detail"],
+  ["Reward","the payoff — the point, the punchline, or the twist"]
 ];
 
 const EDITS = ["Hook is on screen in the first second","Captions burned in","Dead air trimmed at the front",
@@ -751,7 +749,7 @@ function card(i){
       <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
   }
   if(i.stage==="batch"){
-    const B = beatsOf(i), n = done(i), segs = B.length || 5;
+    const B = beatsOf(i), n = done(i), segs = B.length || 3;
     const shotsIdx = (i.shots||[]).map((s,x)=>({s,x}));
     const unassigned = shotsIdx.filter(o=>!B.some(bt=>bt.id===o.s.beatId));
     const beatOpts = [["","Unassigned"]].concat(B.map((bt,x)=>
@@ -806,7 +804,7 @@ function card(i){
         </div>`).join("") || `<div class="empty" style="padding:16px 12px">No beats yet. Add them in the order you'll say them.</div>`}
         <div class="row">
           <button class="ghost tiny" data-act="beatadd" data-id="${i.id}">+ Add beat</button>
-          ${B.length?"":`<button class="ghost tiny" data-act="beatfmt" data-id="${i.id}">Use the 5-beat format</button>`}
+          ${B.length?"":`<button class="ghost tiny" data-act="beatfmt" data-id="${i.id}">Use the Hook / Retain / Reward format</button>`}
         </div>
         <div class="unassigned-shots">
           <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">UNASSIGNED SHOTS</div>
