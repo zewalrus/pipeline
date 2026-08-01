@@ -130,6 +130,10 @@ select{font-size:13px;padding:6px 8px}
 .beat .anchor label{font:500 9px/1.2 "IBM Plex Mono",monospace;letter-spacing:.1em;
   text-transform:uppercase;color:var(--grade);flex:none;width:52px}
 .beat .anchor input{font-family:"IBM Plex Mono",monospace;font-size:13px;padding:6px 8px}
+.beat-shots{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.beat-shots input[type=text]{font-size:13px;padding:6px 8px}
+.unassigned-shots{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
+.unassigned-shots input[type=text]{font-size:13px;padding:6px 8px}
 .guide{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 10px}
 .g{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;
   color:var(--muted);border:1px dashed var(--line);border-radius:var(--r);padding:5px 7px}
@@ -546,9 +550,13 @@ GRADE IN CAPCUT — in this order
 (Replace these with your exact numbers — this is a placeholder.)`;
 
 const KEY = "pipeline:v1";
-let S = null, filter = "all", q = "", open = {}, openH = {}, MODE = "checking";
+let S = null, filter = "all", q = "", open = {}, MODE = "checking";
 let trash = null, trashTimer = null;
 let sparkQueue = [], sparkCurrent = "";
+/* Shots reference a beat by this id, not by position, so reordering or
+   deleting beats never silently reassigns a shot to the wrong one. */
+let beatSeq = 0;
+const newBeatId = () => "b"+Date.now()+"-"+(beatSeq++);
 
 function fresh(){
   return { ideas: [], grading: DEFAULT_GRADING, review:"" };
@@ -580,6 +588,10 @@ function migrate(d){
        never shows up as a choice, but it keeps old cards from silently
        becoming whichever pillar happens to be first in the new list. */
     if(!PILLARS.includes(i.cat)) i.cat = "Unsorted";
+    /* Beats predate having an id at all; shots predate being linked to one.
+       Backfill both so old cards can use the beat/shot assignment UI. */
+    i.beats.forEach(b=>{ if(!b.id) b.id = newBeatId(); });
+    (i.shots||[]).forEach(s=>{ if(typeof s.beatId !== "string") s.beatId = ""; });
   });
   return d;
 }
@@ -740,11 +752,22 @@ function card(i){
   }
   if(i.stage==="batch"){
     const B = beatsOf(i), n = done(i), segs = B.length || 5;
+    const shotsIdx = (i.shots||[]).map((s,x)=>({s,x}));
+    const unassigned = shotsIdx.filter(o=>!B.some(bt=>bt.id===o.s.beatId));
+    const beatOpts = [["","Unassigned"]].concat(B.map((bt,x)=>
+      [bt.id, `${String(x+1).padStart(2,"0")} ${glabel(bt,x)||"Beat"}${(bt.t||"").trim()?" — "+bt.t.trim().slice(0,22):""}`]));
+    const shotRow = o => `<div class="shot-row">
+      <label class="check${o.s.done?" done":""}">
+        <input type="checkbox" data-act="shotdone" data-id="${i.id}" data-k="${o.x}"${o.s.done?" checked":""}>
+        <span>${esc(o.s.t)}</span>
+      </label>
+      ${sel("shotfootage",FOOTAGE,o.s.footage||"",o.x)}
+      ${sel("shotbeat",beatOpts,o.s.beatId||"",o.x)}
+    </div>`;
     body = `<div class="selects">${sel("cat",PILLARS,i.cat)}</div>
       <div class="strip">${Array.from({length:segs},(_,x)=>`<div class="seg${x<n?" done":""}"></div>`).join("")}</div>
       <div class="row">
-        <button class="ghost tiny" data-act="beats" data-id="${i.id}">${open[i.id]?"Hide beat sheet":"Beat sheet"} ${B.length?n+"/"+B.length:""}</button>
-        <button class="ghost tiny" data-act="shots" data-id="${i.id}">${openH[i.id]?"Hide shots":"Shots"} ${(i.shots||[]).length||""}</button>
+        <button class="ghost tiny" data-act="beats" data-id="${i.id}">${open[i.id]?"Hide beat sheet":"Beat sheet"} ${B.length?n+"/"+B.length:""}${(i.shots||[]).length?" · "+i.shots.length+" shots":""}</button>
         <button class="tiny" data-act="to-ready" data-id="${i.id}"${isReady(i)?"":" disabled style=\"opacity:.35;cursor:default\""}>Ready to film →</button>
       </div>
       ${isReady(i)?"":`<div class="gate">${gateText(i)}</div>`}
@@ -773,25 +796,28 @@ function card(i){
             <input type="text" id="bd-${i.id}-${x}" data-act="beatdetail" data-id="${i.id}" data-k="${x}"
               placeholder="the exact name, number, or line you keep forgetting" value="${esc(b.d||"")}">
           </div>
+          <div class="beat-shots">
+            ${shotsIdx.filter(o=>o.s.beatId===b.id).map(shotRow).join("")}
+            <div style="margin-top:8px">
+              <input type="text" data-act="shotenter" data-id="${i.id}" data-beat="${b.id}" placeholder="add a shot for this beat">
+              <button class="ghost tiny" data-act="shotadd" data-id="${i.id}" data-beat="${b.id}" style="margin-top:6px">+ Add</button>
+            </div>
+          </div>
         </div>`).join("") || `<div class="empty" style="padding:16px 12px">No beats yet. Add them in the order you'll say them.</div>`}
         <div class="row">
           <button class="ghost tiny" data-act="beatadd" data-id="${i.id}">+ Add beat</button>
           ${B.length?"":`<button class="ghost tiny" data-act="beatfmt" data-id="${i.id}">Use the 5-beat format</button>`}
         </div>
-      </div>
-      <div class="beats${openH[i.id]?" open":""}">
-        <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">SHOT LIST</div>
-        <div style="font-size:12px;color:var(--muted);margin:3px 0 8px">Name the actual shot, not the category. "Rabbit chewing the baseboard behind my desk," not "b-roll."</div>
-        ${(i.shots||[]).map((s,x)=>`<div class="shot-row">
-          <label class="check${s.done?" done":""}">
-            <input type="checkbox" data-act="shotdone" data-id="${i.id}" data-k="${x}"${s.done?" checked":""}>
-            <span>${esc(s.t)}</span>
-          </label>
-          ${sel("shotfootage",FOOTAGE,s.footage||"",x)}
-        </div>`).join("")||`<div style="font-size:13px;color:var(--muted);padding:4px 0">No shots listed yet.</div>`}
-        <div style="margin-top:8px"><input type="text" id="shotin-${i.id}" data-act="shotenter" data-id="${i.id}" placeholder="Describe one shot, then add it"></div>
-        <div class="row"><button class="ghost tiny" data-act="shotadd" data-id="${i.id}">Add shot</button>
-        ${(i.shots||[]).length?`<button class="ghost tiny" data-act="shotclear" data-id="${i.id}">Clear filmed</button>`:""}</div>
+        <div class="unassigned-shots">
+          <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">UNASSIGNED SHOTS</div>
+          <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Name the actual shot, not the category. "Rabbit chewing the baseboard behind my desk," not "b-roll." Pick a beat above once you know where it lands.</div>
+          ${unassigned.map(shotRow).join("")||`<div style="font-size:13px;color:var(--muted);padding:4px 0">No unassigned shots.</div>`}
+          <div style="margin-top:8px">
+            <input type="text" data-act="shotenter" data-id="${i.id}" data-beat="" placeholder="describe one shot, then add it">
+            <button class="ghost tiny" data-act="shotadd" data-id="${i.id}" data-beat="" style="margin-top:6px">+ Add</button>
+          </div>
+          ${(i.shots||[]).some(s=>s.done)?`<div class="row"><button class="ghost tiny" data-act="shotclear" data-id="${i.id}">Clear filmed</button></div>`:""}
+        </div>
       </div>`;
   }
   if(i.stage==="ready"){
@@ -966,21 +992,24 @@ document.body.addEventListener("click", e=>{
     trashTimer = setTimeout(()=>{ trash=null; el("toast").classList.remove("show"); }, 12000);
   }
   else if(a==="beats"){ open[i.id]=!open[i.id]; render(); return; }
-  else if(a==="shots"){ openH[i.id]=!openH[i.id]; render(); return; }
   else if(a==="cap"){ copyText((i.caption||"").trim(), el("cap-"+i.id), b.closest(".row")); return; }
   else if(a==="tp"){ copyText(tprompt(i), el("tp-"+i.id), b.closest(".row")); return; }
-  else if(a==="beatadd"){ i.beats=beatsOf(i); i.beats.push({g:"",t:"",d:""}); open[i.id]=true; save(); render();
+  else if(a==="beatadd"){ i.beats=beatsOf(i); i.beats.push({id:newBeatId(),g:"",t:"",d:""}); open[i.id]=true; save(); render();
     const f=document.querySelector(`[data-act="beattrig"][data-id="${i.id}"][data-k="${i.beats.length-1}"]`); if(f) f.focus(); return; }
-  else if(a==="beatfmt"){ i.beats = GUIDE.map((g,x)=>({g:x===0?"":g[0],t:"",d:""})); open[i.id]=true; save(); render(); return; }
-  else if(a==="beatdel"){ i.beats=beatsOf(i); i.beats.splice(+b.dataset.k,1); save(); render(); return; }
+  else if(a==="beatfmt"){ i.beats = GUIDE.map((g,x)=>({id:newBeatId(),g:x===0?"":g[0],t:"",d:""})); open[i.id]=true; save(); render(); return; }
+  else if(a==="beatdel"){
+    i.beats=beatsOf(i); const [removed]=i.beats.splice(+b.dataset.k,1);
+    if(removed) (i.shots||[]).forEach(s=>{ if(s.beatId===removed.id) s.beatId=""; });
+    save(); render(); return;
+  }
   else if(a==="beatup"||a==="beatdown"){
     i.beats=beatsOf(i); const k=+b.dataset.k, j=a==="beatup"?k-1:k+1;
     if(j<0||j>=i.beats.length) return;
     [i.beats[k],i.beats[j]]=[i.beats[j],i.beats[k]]; save(); render(); return;
   }
   else if(a==="shotadd"){
-    const inp = el("shotin-"+i.id); const v = (inp?inp.value:"").trim(); if(!v) return;
-    i.shots = i.shots||[]; i.shots.push({t:v,done:false,footage:""}); openH[i.id]=true; save(); render(); return;
+    const inp = b.previousElementSibling; const v = (inp?inp.value:"").trim(); if(!v) return;
+    i.shots = i.shots||[]; i.shots.push({t:v,done:false,footage:"",beatId:b.dataset.beat||""}); open[i.id]=true; save(); render(); return;
   }
   else if(a==="shotclear"){ i.shots = (i.shots||[]).filter(s=>!s.done); save(); render(); return; }
   else return;
@@ -991,6 +1020,7 @@ document.body.addEventListener("change", e=>{
   const i = S.ideas.find(x=>x.id===t.dataset.id);
   if(a==="cat"){ i.cat=t.value; }
   else if(a==="shotfootage"){ i.shots[t.dataset.k].footage = t.value; }
+  else if(a==="shotbeat"){ i.shots[t.dataset.k].beatId = t.value; }
   else if(a==="check"){ i.checks[t.dataset.k]=t.checked; }
   else if(a==="shotdone"){ i.shots[t.dataset.k].done = t.checked; }
   else if(a==="pdate"){ i.posted = t.value; }
@@ -1021,7 +1051,7 @@ document.body.addEventListener("input", e=>{
     const strip = cardEl.querySelector(".strip");
     const n = done(i); [...strip.children].forEach((s,x)=>s.classList.toggle("done",x<n));
     const btn = cardEl.querySelector('[data-act="beats"]');
-    if(btn) btn.textContent = "Hide beat sheet "+n+"/"+beatsOf(i).length;
+    if(btn) btn.textContent = "Hide beat sheet "+n+"/"+beatsOf(i).length+((i.shots||[]).length?" · "+i.shots.length+" shots":"");
     refreshGate(i, cardEl);
   }
 });
@@ -1030,7 +1060,7 @@ document.body.addEventListener("keydown", e=>{
     e.preventDefault();
     const i = S.ideas.find(x=>x.id===e.target.dataset.id); if(!i) return;
     const v = e.target.value.trim(); if(!v) return;
-    i.shots = i.shots||[]; i.shots.push({t:v,done:false,footage:""}); save(); render();
+    i.shots = i.shots||[]; i.shots.push({t:v,done:false,footage:"",beatId:e.target.dataset.beat||""}); open[i.id]=true; save(); render();
   }
 });
 el("filter").onchange = e => { filter = e.target.value; render(); };
