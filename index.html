@@ -157,9 +157,6 @@ select{font-size:13px;padding:6px 8px}
 .spark-q.idle{font-family:"Public Sans",sans-serif;font-weight:400;font-size:14px;color:var(--muted)}
 .gate{font:400 12px/1.35 "Public Sans",sans-serif;color:var(--muted);margin-top:7px}
 .gate b{color:var(--ink);font-weight:600}
-.acct-note{font:400 13px/1.35 "Public Sans",sans-serif;color:var(--muted);margin-bottom:8px}
-.acct-note b{color:var(--ink);font-weight:600}
-.acct-pick{margin-bottom:8px}
 footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size:12px;color:var(--muted)}
 @media (prefers-reduced-motion:no-preference){ .idea{transition:border-color .2s} }
 </style>
@@ -333,14 +330,7 @@ if("serviceWorker" in navigator){
 <div class="toast" id="toast"><span id="toast-msg"></span><button id="undo">Undo</button></div>
 
 <script>
-const PILLARS = ["Unsorted","Spiritual","Yapping","Motivation","Combination","Story time",
-  "Lesbian fashion","Relatable / funny / conversational","Fingerboarding"];
-
-/* Which account a card posts to is driven by pillar, except Combination,
-   where it's a real choice. Never store the account for a locked pillar —
-   accountOf() derives it fresh so it can't go stale if the pillar changes. */
-const PSYCHIC_PILLARS = ["Spiritual","Yapping","Motivation"];
-const ACCOUNTS = [["","Pick an account"],["psychic","Psychic Sidekick"],["trinity","Trinity's Life on Earth"]];
+const PILLARS = ["Channeled Message","Motivation","Tutorial","Myth Busting","Ranking","List"];
 
 const FOOTAGE = [
   ["","Footage type — not set"],
@@ -611,8 +601,10 @@ function migrate(d){
     delete i.script;
     if(i.hook && !i.topic){ i.topic = i.hook; delete i.hook; }
     if(i.cat === "Motivational") i.cat = "Motivation";
+    /* "Unsorted" is a deliberate hidden fallback: it's not in PILLARS, so it
+       never shows up as a choice, but it keeps old cards from silently
+       becoming whichever pillar happens to be first in the new list. */
     if(!PILLARS.includes(i.cat)) i.cat = "Unsorted";
-    if(typeof i.account !== "string") i.account = "";
   });
   return d;
 }
@@ -688,8 +680,6 @@ const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;
 const beatsOf = i => Array.isArray(i.beats) ? i.beats : [];
 const done = i => beatsOf(i).filter(b=>(b.t||"").trim()).length;
 const topicOf = i => (i.topic || i.hook || "").trim();
-const accountLabel = v => (ACCOUNTS.find(a=>a[0]===v)||["",""])[1];
-const accountOf = i => PSYCHIC_PILLARS.includes(i.cat) ? "psychic" : i.cat==="Combination" ? (i.account||"") : "trinity";
 const haystack = i => [topicOf(i), i.note, i.cat, i.caption,
   ...beatsOf(i).flatMap(b=>[b.t,b.d]), ...(i.shots||[]).map(s=>s.t)
 ].filter(Boolean).join(" ").toLowerCase();
@@ -748,22 +738,15 @@ document.querySelectorAll(".clip").forEach(c=>c.onclick=()=>{
 el("add").onclick = ()=>{
   const h = el("i-topic").value.trim(); if(!h) return;
   S.ideas.unshift({id:"i"+Date.now(), topic:h, note:el("i-note").value.trim(),
-    cat:el("i-pillar").value||"Unsorted", account:"",
+    cat:el("i-pillar").value||"Channeled Message",
     footage:"", beats:[], checks:{}, stage:"capture", created:Date.now()});
-  el("i-topic").value=""; el("i-note").value=""; el("i-pillar").value="Unsorted"; save(); render();
+  el("i-topic").value=""; el("i-note").value=""; el("i-pillar").value="Channeled Message"; save(); render();
 };
 
 function card(i){
   const sel = (name,opts,val)=>`<select data-act="${name}" data-id="${i.id}">`+
     opts.map(o=>{const v=Array.isArray(o)?o[0]:o, l=Array.isArray(o)?o[1]:o;
       return `<option value="${esc(v)}"${v===val?" selected":""}>${esc(l)}</option>`}).join("")+`</select>`;
-
-  /* Combination is the only pillar where the account is a real choice —
-     everywhere else it's fixed by pillar, so show it as a note, not a select. */
-  const acc = accountOf(i);
-  const acctHtml = i.cat==="Combination"
-    ? `<div class="acct-pick">${sel("account",ACCOUNTS,i.account||"")}</div>`
-    : `<div class="acct-note">Post on <b>${esc(accountLabel(acc))}</b></div>`;
 
   let body = "", head = "";
   if(i.stage==="capture"){
@@ -772,14 +755,12 @@ function card(i){
       <input class="note-edit" type="text" data-act="notebox" data-id="${i.id}"
         placeholder="note to self (optional)" value="${esc(i.note||"")}">`;
     body = `<div class="selects">${sel("cat",PILLARS,i.cat)}</div>
-      ${acctHtml}
       <div class="row"><button class="tiny" data-act="to-batch" data-id="${i.id}">Send to Batch</button>
       <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
   }
   if(i.stage==="batch"){
     const B = beatsOf(i), n = done(i), segs = B.length || 5;
     body = `<div class="selects">${sel("cat",PILLARS,i.cat)}${sel("footage",FOOTAGE,i.footage)}</div>
-      ${acctHtml}
       <div class="strip">${Array.from({length:segs},(_,x)=>`<div class="seg${x<n?" done":""}"></div>`).join("")}</div>
       <div class="row">
         <button class="ghost tiny" data-act="beats" data-id="${i.id}">${open[i.id]?"Hide beat sheet":"Beat sheet"} ${B.length?n+"/"+B.length:""}</button>
@@ -850,8 +831,7 @@ function card(i){
       <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
   }
   if(i.stage==="ship"){
-    body = `${acctHtml}
-      ${EDITS.map((c,x)=>`<label class="check${i.checks[x]?" done":""}">
+    body = `${EDITS.map((c,x)=>`<label class="check${i.checks[x]?" done":""}">
         <input type="checkbox" data-act="check" data-id="${i.id}" data-k="${x}"${i.checks[x]?" checked":""}><span>${c}</span></label>`).join("")}
       <div style="margin-top:10px">
         <label class="f">Caption</label>
@@ -874,7 +854,7 @@ function card(i){
   if(!head) head = `<div class="hook">${esc(topicOf(i))}</div>`+
     (i.note?`<div class="note">${esc(i.note)}</div>`:"");
   return `<article class="idea" data-stage="${i.stage}">${head}
-    <div class="meta">${esc(i.cat)}${i.footage?" · "+esc(ft.split(" (")[0]):""}${acc?" · "+esc(accountLabel(acc)):""}${i.stage==="posted"?" · posted "+esc(i.posted||""):""}</div>
+    <div class="meta">${esc(i.cat)}${i.footage?" · "+esc(ft.split(" (")[0]):""}${i.stage==="posted"?" · posted "+esc(i.posted||""):""}</div>
     ${body}</article>`;
 }
 
@@ -1027,7 +1007,6 @@ document.body.addEventListener("change", e=>{
   const i = S.ideas.find(x=>x.id===t.dataset.id);
   if(a==="cat"){ i.cat=t.value; }
   else if(a==="footage"){ i.footage=t.value; }
-  else if(a==="account"){ i.account=t.value; }
   else if(a==="check"){ i.checks[t.dataset.k]=t.checked; }
   else if(a==="shotdone"){ i.shots[t.dataset.k].done = t.checked; }
   else if(a==="pdate"){ i.posted = t.value; }
@@ -1077,7 +1056,7 @@ el("save-grade").onclick = ()=>{ S.grading = el("grading").value; save();
 el("save-review").onclick = ()=>{ S.review = el("review").value; save(); };
 
 el("export").onclick = async ()=>{
-  const line = i => `- ${topicOf(i)}\n    pillar: ${i.cat}\n    account: ${accountLabel(accountOf(i))||"not set"}\n    footage: ${i.footage||"not set"}\n`+
+  const line = i => `- ${topicOf(i)}\n    pillar: ${i.cat}\n    footage: ${i.footage||"not set"}\n`+
     ((i.shots||[]).length?`    shots:\n`+i.shots.map(s=>`      [${s.done?"x":" "}] ${s.t}`).join("\n")+"\n":"")+
     (beatsOf(i).length?`    BEAT SHEET:\n`+beatsOf(i).map((b,x)=>
       `      ${String(x+1).padStart(2,"0")}${glabel(b,x)?" "+glabel(b,x):""} — ${b.t||"..."}`+
