@@ -698,19 +698,21 @@ async function copyText(txt, msgEl, nearEl){
   ta.style.cssText = "width:100%;min-height:150px;margin-top:8px;font-size:13px";
   (nearEl||document.body).after(ta); ta.focus(); ta.select();
 }
-document.querySelectorAll(".clip").forEach(c=>c.onclick=()=>{
-  document.querySelectorAll(".clip").forEach(x=>x.classList.toggle("on",x===c));
-  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="s-"+c.dataset.p));
+function showTab(p){
+  document.querySelectorAll(".clip").forEach(x=>x.classList.toggle("on",x.dataset.p===p));
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="s-"+p));
   window.scrollTo({top:0,behavior:"instant"});
-});
+}
+document.querySelectorAll(".clip").forEach(c=>c.onclick=()=>showTab(c.dataset.p));
 
 /* ---- add ---- */
 el("add").onclick = ()=>{
   const h = el("i-topic").value.trim(); if(!h) return;
   S.ideas.unshift({id:"i"+Date.now(), topic:h, note:el("i-note").value.trim(),
     cat:el("i-pillar").value||"Channeled Message",
-    footage:"", beats:[], checks:{}, stage:"capture", created:Date.now()});
+    footage:"", beats:[], checks:{}, stage:"batch", created:Date.now()});
   el("i-topic").value=""; el("i-note").value=""; el("i-pillar").value="Channeled Message"; save(); render();
+  showTab("batch");
 };
 
 function card(i){
@@ -719,11 +721,13 @@ function card(i){
       return `<option value="${esc(v)}"${v===val?" selected":""}>${esc(l)}</option>`}).join("")+`</select>`;
 
   let body = "", head = "";
-  if(i.stage==="capture"){
+  if(i.stage==="capture" || i.stage==="batch"){
     head = `<textarea class="hook-edit" data-act="topicbox" data-id="${i.id}"
         placeholder="what's this one about?">${esc(topicOf(i))}</textarea>
       <input class="note-edit" type="text" data-act="notebox" data-id="${i.id}"
         placeholder="note to self (optional)" value="${esc(i.note||"")}">`;
+  }
+  if(i.stage==="capture"){
     body = `<div class="selects">${sel("cat",PILLARS,i.cat)}</div>
       <div class="row"><button class="tiny" data-act="to-batch" data-id="${i.id}">Send to Batch</button>
       <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
