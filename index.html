@@ -770,6 +770,10 @@ function card(i){
       </div>
       ${isReady(i)?"":`<div class="gate">${gateText(i)}</div>`}
       <div class="row">
+        <button class="tiny" data-act="tp" data-id="${i.id}">Copy as Text</button>
+        <span class="count" id="tp-${i.id}"></span>
+      </div>
+      <div class="row">
         <button class="ghost tiny" data-act="to-capture" data-id="${i.id}">Back to Capture</button>
         <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button>
       </div>
