@@ -117,7 +117,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .pc .t{font-weight:700;font-size:15px;margin:5px 0 4px;line-height:1.3;display:block}
 .pc .m{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
 .stage{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-.stage.ready{color:var(--good)} .stage.posted{color:var(--accent)}
+.stage.ready{color:var(--good)} .stage.posted,.stage.postiz{color:var(--accent)}
 
 .qc{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--reel);border-radius:var(--r);padding:11px 12px}
 .qc[data-fmt=carousel]{border-left-color:var(--carousel)} .qc[data-fmt=image]{border-left-color:var(--image)}
@@ -187,6 +187,10 @@ details.more summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--a
 .plat-h{font-weight:700;margin:12px 0 6px;display:flex;align-items:center;gap:6px}
 .plat-h:first-child{margin-top:0}
 
+.xc{display:block;background:var(--card);border:1px dashed var(--accent);border-radius:var(--r);padding:11px 12px;color:var(--ink);text-decoration:none}
+.xc .t{font-weight:600;font-size:14px;margin:5px 0 4px;line-height:1.35;display:block;white-space:pre-line;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.xc .m{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
 .pzb{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px}
 .pzbox{background:var(--accent-soft);border-radius:10px;padding:12px;margin-bottom:12px}
 .pzbox .row{margin-top:8px}
@@ -483,7 +487,9 @@ const getPost = id => S.posts.find(p=>p.id===id);
 const activePlats = p => PLATS.filter(([k])=>p.plats[k]);
 const isPosted = p => { const a = activePlats(p); return a.length>0 && a.every(([k])=>p.posted[k]); };
 const anyPosted = p => PLATS.some(([k])=>p.posted[k]);
-const stageOf = p => isPosted(p) ? "posted" : (p.date ? "scheduled" : p.stage);
+/* A date alone doesn't mean scheduled: stage is posted, queued in Postiz, or draft/ready. */
+const stageOf = p => isPosted(p) ? "posted" : p.pz ? "postiz" : p.stage;
+const STAGE_LABEL = {draft:"draft", ready:"ready", postiz:"in Postiz", posted:"posted"};
 const titleOf = p => (p.title||"").trim() || (p.hook||"").trim().split("\n")[0] || ("Untitled "+fmtName(p.format).toLowerCase());
 const num = v => Number(v)||0;
 const viewsOf = p => PLATS.reduce((s,[k])=>s+num(p.stats[k].views),0);
@@ -634,21 +640,27 @@ async function pzCancel(p){
   p.pz = null; touch(p);
 }
 
-const PZ_LAST = "studio:pz-last";
-async function pzRefresh(){
-  const L = S.posts.filter(p=>p.pz && p.pz.ids && p.pz.ids.length && !isPosted(p));
-  if(!L.length) return 0;
-  const ts = L.map(p=>Date.parse(p.pz.date)||Date.now());
-  const q = "?startDate="+encodeURIComponent(new Date(Math.min(...ts)-2*864e5).toISOString())+
-            "&endDate="+encodeURIComponent(new Date(Math.max(...ts)+2*864e5).toISOString());
-  const data = await pz("/public/v1/posts"+q);
-  const list = Array.isArray(data) ? data : (data && data.posts) || [];
+const PZ_LAST = "studio:pz-last", PZ_CACHE = "studio:pz-cache";
+/* Posts made on the Postiz site (not from this app). Kept on this device only. */
+let pzExt = (()=>{ try{ return JSON.parse(localStorage.getItem(PZ_CACHE)||"null"); }catch(e){ return null; } })();
+const extItems = () => (pzExt && pzExt.items) || [];
+const stripHtml = h => { const d = document.createElement("div"); d.innerHTML = String(h||"").replace(/<\/p>|<br\s*\/?>/gi,"\n"); return (d.textContent||"").trim(); };
+const toMin = t => { const [h,m] = String(t||"0:0").split(":").map(Number); return h*60+(m||0); };
+function platKeyOf(x){
+  const i = x.integration || {};
+  const k = platOfChannel(i.id || x.integrationId); if(k) return k;
+  const ident = String(i.providerIdentifier || i.identifier || "").toLowerCase();
+  return ident.startsWith("instagram") ? "ig" : ident==="facebook" ? "fb" : "";
+}
+const pzState = x => String(x.state || x.status || "").toUpperCase();
+
+/* Update this app's scheduled posts from a Postiz post list. */
+function pzApply(list){
   let changed = 0;
-  L.forEach(p=>{
+  S.posts.filter(p=>p.pz && p.pz.ids && p.pz.ids.length).forEach(p=>{
     p.pz.ids.forEach(r=>{
       const f = list.find(x=>x.id===r.id); if(!f) return;
-      const st = String(f.state||f.status||"").toUpperCase();
-      const k = r.plat || platOfChannel(f.integration && f.integration.id) || platOfChannel(f.integrationId);
+      const st = pzState(f), k = r.plat || platKeyOf(f);
       if(!k) return;
       if(p.pz.state[k]!==st){ p.pz.state[k] = st; changed++; }
       if(st==="PUBLISHED" && !p.posted[k]){
@@ -656,21 +668,60 @@ async function pzRefresh(){
         if(f.releaseURL) p.links[k] = f.releaseURL;
         changed++;
       }
-      if(st==="ERROR") p.pz.err = f.error || "Postiz couldn't publish this. Open Postiz to see why.";
+      if(st==="ERROR" && !p.pz.err){ p.pz.err = f.error || "Postiz couldn't publish this. Open Postiz to see why."; changed++; }
     });
   });
-  try{ localStorage.setItem(PZ_LAST, String(Date.now())); }catch(e){}
-  if(changed) save();
   return changed;
 }
-/* Check quietly when the app opens, if something should have gone out by now. */
+
+/* One call: fetch Postiz posts from a week ago to ~6 weeks ahead, update the
+   app's own scheduled posts, link plan posts to Postiz posts in the same time
+   slot, and keep the rest to show on Plan and Today. */
+async function pzSync(){
+  const own = S.posts.filter(p=>p.pz).map(p=>Date.parse(p.pz.date)).filter(Boolean);
+  const start = Math.min(Date.now()-7*864e5, ...own.map(t=>t-864e5));
+  const end   = Math.max(Date.now()+45*864e5, ...own.map(t=>t+864e5));
+  const data = await pz("/public/v1/posts?startDate="+encodeURIComponent(new Date(start).toISOString())+
+                        "&endDate="+encodeURIComponent(new Date(end).toISOString()));
+  const list = (Array.isArray(data) ? data : (data && data.posts) || []).filter(x=>x && !x.deletedAt && !x.parentPostId);
+  let changed = pzApply(list);
+
+  const mine = new Set(S.posts.flatMap(p=>((p.pz && p.pz.ids) || []).map(r=>r.id)));
+  const groups = {};
+  list.forEach(x=>{ if(!mine.has(x.id)) (groups[x.group || x.id] = groups[x.group || x.id] || []).push(x); });
+  let items = [], linked = 0;
+  Object.values(groups).forEach(arr=>{
+    const d = new Date(arr[0].publishDate); if(isNaN(d)) return;
+    const ids = arr.map(x=>({id:x.id, plat:platKeyOf(x)}));
+    const names = arr.map(x=>{ const k = platKeyOf(x); return k ? k.toUpperCase() : ((x.integration||{}).name || "Other"); });
+    const url = (arr.find(x=>x.releaseURL)||{}).releaseURL || "";
+    items.push({ ids, plats:[...new Set(ids.map(r=>r.plat).filter(Boolean))], names:[...new Set(names)],
+      date:ymd(d), time:pad(d.getHours())+":"+pad(d.getMinutes()), iso:d.toISOString(),
+      state:arr.map(pzState).includes("ERROR") ? "ERROR" : arr.every(x=>pzState(x)==="PUBLISHED") ? "PUBLISHED" : pzState(arr[0]),
+      text:stripHtml(arr[0].content).slice(0,160), url });
+  });
+  /* A plan post in the same slot (same day, within 15 min) is the same post: link them. */
+  items = items.filter(it=>{
+    if(!it.plats.length) return true;
+    const p = S.posts.find(p=>!p.pz && !isPosted(p) && p.date===it.date && p.time && Math.abs(toMin(p.time)-toMin(it.time))<=15
+                         && it.plats.some(k=>p.plats[k]));
+    if(!p) return true;
+    p.pz = {at:Date.now(), date:it.iso, ids:it.ids.filter(r=>r.plat), state:{}, err:"", linked:true};
+    p.stage = "ready"; p.updated = Date.now(); linked++; changed++;
+    return false;
+  });
+  if(linked) pzApply(list);
+  pzExt = {at:Date.now(), items};
+  try{ localStorage.setItem(PZ_CACHE, JSON.stringify(pzExt)); localStorage.setItem(PZ_LAST, String(Date.now())); }catch(e){}
+  if(changed) save();
+  return {changed, linked, external:items.length};
+}
+/* Check quietly when the app opens or comes back, at most every 10 minutes. */
 async function pzAutoCheck(){
-  if(!pzReady()) return;
+  if(!pzReady() || !pzMapped()) return;
   let last = 0; try{ last = Number(localStorage.getItem(PZ_LAST))||0; }catch(e){}
-  if(Date.now()-last < 15*60e3) return;
-  const due = S.posts.some(p=>p.pz && !isPosted(p) && Date.parse(p.pz.date) < Date.now());
-  if(!due) return;
-  try{ if(await pzRefresh()){ render(); if(editing) renderEditor(); } }catch(e){}
+  if(Date.now()-last < 10*60e3) return;
+  try{ await pzSync(); render(); if(editing) renderEditor(); }catch(e){}
 }
 async function pzUpload(p, files){
   const msg = el("media-msg");
@@ -709,7 +760,7 @@ function postCard(p){
   const st = stageOf(p);
   const when = p.date ? nice(p.date)+(p.time?" · "+time12(p.time):"") : "";
   return `<button class="pc" data-fmt="${p.format}" data-a="open" data-id="${p.id}">
-    <span class="ft ${p.format}">${fmtName(p.format)}</span> <span class="stage ${st}">${st}</span>
+    <span class="ft ${p.format}">${fmtName(p.format)}</span> <span class="stage ${st}">${STAGE_LABEL[st]||st}</span>
     <span class="t">${esc(titleOf(p))}</span>
     <span class="m">${platBadges(p)}${p.pz?`<span class="pzb">Postiz</span>`:""}${p.pillar?"<span>· "+esc(p.pillar)+"</span>":""}${when?"<span>· "+when+"</span>":""}</span>
   </button>`;
@@ -728,7 +779,19 @@ function quickCard(p){
 }
 
 /* ---------- TODAY ---------- */
-function countFor(date, plat){ return S.posts.filter(p=>p.date===date && p.plats[plat]).length; }
+function countFor(date, plat){
+  return S.posts.filter(p=>p.date===date && p.plats[plat]).length + extItems().filter(x=>x.date===date && x.plats.includes(plat)).length;
+}
+const extFor = date => extItems().filter(x=>x.date===date).sort((a,b)=>a.time.localeCompare(b.time));
+function extCard(x){
+  const st = x.state==="PUBLISHED" ? "posted" : x.state==="ERROR" ? "failed" : "scheduled";
+  const tag = x.url ? "a" : "div";
+  return `<${tag} class="xc" ${x.url?`href="${esc(x.url)}" target="_blank" rel="noopener"`:""}>
+    <span class="pzb">From Postiz</span> <span class="stage ${st==="posted"?"posted":""}" ${st==="failed"?'style="color:var(--bad)"':""}>${st}</span>
+    <span class="t">${esc(x.text || "(no caption)")}</span>
+    <span class="m">${x.names.map(n=>`<span class="pb ${n==="IG"?"ig":n==="FB"?"fb":""} ${st==="posted"?"posted":""}"><span>${esc(n)}</span></span>`).join(" ")}<span>· ${time12(x.time)}</span></span>
+  </${tag}>`;
+}
 function renderToday(){
   const t = today(), goal = Math.max(1, num(S.brand.perDay));
   const strip = [...Array(7)].map((_,i)=>{
@@ -744,7 +807,7 @@ function renderToday(){
   const counts = {
     ideas:S.ideas.length,
     drafts:S.posts.filter(p=>stageOf(p)==="draft").length,
-    ready:S.posts.filter(p=>["ready","scheduled"].includes(stageOf(p))).length,
+    ready:S.posts.filter(p=>["ready","postiz"].includes(stageOf(p))).length,
     posted:S.posts.filter(p=>postedAt(p)>weekAgo).length
   };
   const empties = [...Array(7)].reduce((n,_,i)=>{ const k = ymd(addDays(new Date(),i)); return n + PLATS.filter(([pl])=>countFor(k,pl)<goal).length; },0);
@@ -758,8 +821,8 @@ function renderToday(){
     </div>
 
     <div class="row" style="justify-content:space-between;margin:0"><h2>Post today</h2>
-      ${pzReady() && S.posts.some(p=>p.pz && !isPosted(p)) ? `<button class="ghost tiny" data-a="pz-refresh">Check Postiz</button>` : ""}</div>
-    <div class="list" style="margin:8px 0 18px">${due.length ? due.map(quickCard).join("") :
+      ${pzReady() && pzMapped() ? `<button class="ghost tiny" data-a="pz-refresh">Check Postiz</button>` : ""}</div>
+    <div class="list" style="margin:8px 0 18px">${due.length || extFor(t).length ? due.map(quickCard).join("") + extFor(t).map(extCard).join("") :
       `<div class="empty">Nothing scheduled for today.<div class="row" style="justify-content:center"><button class="tiny" data-a="new" data-date="${t}">+ New post for today</button><button class="tiny ghost" data-a="tab" data-v="plan">Open plan</button></div></div>`}</div>
 
     ${missed.length ? `<h2>Missed</h2><p class="sub">Scheduled earlier but not marked posted. Post it, mark it, or move the date.</p>
@@ -833,7 +896,7 @@ function renderIdeas(){
 function renderPosts(){
   const q = PF.q.toLowerCase();
   const list = S.posts.filter(p=>{
-    if(PF.stage!=="all" && stageOf(p)!==PF.stage && !(PF.stage==="ready" && stageOf(p)==="scheduled")) return false;
+    if(PF.stage!=="all" && stageOf(p)!==PF.stage && !(PF.stage==="ready" && stageOf(p)==="postiz")) return false;
     if(PF.format!=="all" && p.format!==PF.format) return false;
     if(q && ![p.title,p.hook,p.caption,p.pillar,p.cta].join(" ").toLowerCase().includes(q)) return false;
     return true;
@@ -843,7 +906,7 @@ function renderPosts(){
     if(pa) return postedAt(b)-postedAt(a);
     return (a.date||"9999").localeCompare(b.date||"9999") || b.updated-a.updated;
   });
-  const stages = [["all","All"],["draft","Drafts"],["ready","Ready"],["scheduled","Scheduled"],["posted","Posted"]];
+  const stages = [["all","All"],["draft","Drafts"],["ready","Ready"],["postiz","In Postiz"],["posted","Posted"]];
   el("v-posts").innerHTML = `
     <h2>Posts</h2>
     <div class="row" style="margin:6px 0 14px">${FORMATS.map(([k,n])=>`<button class="tiny" data-a="new" data-fmt="${k}">+ ${n}</button>`).join("")}</div>
@@ -869,7 +932,7 @@ function renderPlan(){
       <div class="dh"><b>${DOW[d.getDay()]} ${d.getDate()}</b><span class="small">${MON[d.getMonth()]}${k===t?" · today":""}</span>
         <button class="tiny ghost" data-a="new" data-date="${k}">+ Add</button></div>
       ${gaps?`<div style="margin-bottom:6px">${gaps}</div>`:""}
-      <div class="list">${posts.map(postCard).join("")}</div></div>`;
+      <div class="list">${posts.map(postCard).join("")}${extFor(k).map(extCard).join("")}</div></div>`;
   }).join("");
   const unscheduled = S.posts.filter(p=>!p.date && !isPosted(p) && p.stage==="ready");
   const end = addDays(ws,6);
@@ -881,6 +944,8 @@ function renderPlan(){
       <button class="ghost tiny" data-a="wk" data-v="1" aria-label="Next week">›</button>
       ${weekOff?`<button class="ghost tiny" data-a="wk" data-v="0">This week</button>`:""}
     </div>
+    ${pzReady() && pzMapped() ? `<div class="row" style="margin:-6px 0 14px"><span class="small grow">${pzExt&&pzExt.at?"Postiz checked "+time12(pad(new Date(pzExt.at).getHours())+":"+pad(new Date(pzExt.at).getMinutes())):"Not checked with Postiz yet"}</span>
+      <button class="ghost tiny" data-a="pz-refresh">Refresh from Postiz</button></div>` : ""}
     ${days}
     <h2 style="margin-top:20px">Ready, not scheduled</h2>
     <p class="sub">Open one and give it a date to put it on the plan.</p>
@@ -933,6 +998,8 @@ function renderKit(){
       <textarea data-lines="ctas" rows="4">${esc(S.ctas.join("\n"))}</textarea>
     </div>
 
+    ${kitImport()}
+
     ${kitPostiz()}
 
     <div class="panel">
@@ -942,6 +1009,124 @@ function renderKit(){
         <label class="tiny ghost" style="display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-weight:600;font-size:13px;cursor:pointer;min-height:32px">Restore…<input type="file" accept="application/json,.json" id="import-file" style="display:none"></label></div>
     </div>`;
 }
+function kitImport(){
+  const n = S.posts.filter(p=>p.importKey).length;
+  return `<div class="panel">
+    <h3>Import content plan</h3>
+    <p class="small">Turns each row of your content calendar spreadsheet into a post, with its date, time, format, pillar, on-image text, slides or visual notes, caption and hashtags.</p>
+    <p class="small" style="margin-top:6px"><b>Option 1:</b> In Google Sheets, download the sheet as a CSV file (on a computer: File → Download → .csv; in the app: ⋮ → Share &amp; export → Send a copy → CSV). Then pick it here.</p>
+    <label class="filebtn" style="margin-top:8px">Pick CSV file<input type="file" id="plan-file" accept=".csv,.tsv,.txt,text/csv,text/plain,text/tab-separated-values" hidden></label>
+    <p class="small" style="margin-top:12px"><b>Option 2:</b> Select the rows in the sheet, including the header row, copy them, and paste here.</p>
+    <textarea id="plan-paste" rows="3" placeholder="Paste rows here" style="margin-top:6px"></textarea>
+    <div class="row"><button class="ghost tiny" data-a="plan-import">Import pasted rows</button></div>
+    <p class="small" id="plan-msg" style="margin-top:6px">${n?n+" posts came from a plan import. Importing again updates them instead of adding duplicates.":""}</p>
+  </div>`;
+}
+
+/* ---------- plan import ---------- */
+function parseTable(text){
+  text = String(text||"").replace(/^﻿/,"");
+  const first = text.split(/\r?\n/,1)[0] || "";
+  const delim = (first.match(/\t/g)||[]).length > (first.match(/,/g)||[]).length ? "\t" : ",";
+  const rows = []; let row = [], cell = "", q = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){ cell+='"'; i++; } else q = false; }
+      else cell += c;
+      continue;
+    }
+    if(c==='"' && cell===""){ q = true; continue; }
+    if(c===delim){ row.push(cell); cell = ""; continue; }
+    if(c==="\n" || c==="\r"){ if(c==="\r" && text[i+1]==="\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; continue; }
+    cell += c;
+  }
+  if(cell!=="" || row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r=>r.some(x=>String(x).trim()));
+}
+function parseDateCell(s){
+  s = String(s||"").trim(); let m;
+  if((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return ymd(new Date(+m[1], m[2]-1, +m[3]));
+  if((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))){ let y = +m[3]; if(y<100) y += 2000; return ymd(new Date(y, m[1]-1, +m[2])); }
+  if((m = s.match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/))){
+    const mi = MON.findIndex(x=>x.toLowerCase()===m[1].toLowerCase());
+    if(mi>=0) return ymd(new Date(+m[3], mi, +m[2]));
+  }
+  return "";
+}
+function parseTimeCell(s){
+  const m = String(s||"").trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp])?/); if(!m) return "";
+  let h = +m[1]; const mm = +(m[2]||0);
+  if(m[3]){ const pm = /p/i.test(m[3]); if(h===12) h = pm ? 12 : 0; else if(pm) h += 12; }
+  return h>23 || mm>59 ? "" : pad(h)+":"+pad(mm);
+}
+const formatFromCell = s => /reel|video/i.test(s) ? "reel" : /carousel|slide/i.test(s) ? "carousel" : "image";
+function slidesFromCell(s){
+  const out = [], re = /Slide\s*\d+[^:\n]*:\s*([\s\S]*?)(?=\s*Slide\s*\d+[^:\n]*:|$)/gi; let m;
+  while((m = re.exec(String(s||"")))) out.push(m[1].trim());
+  return out;
+}
+function importPlan(text){
+  const rows = parseTable(text);
+  if(rows.length<2) throw new Error("No rows found. Include the header row (Date, Time, Format, …).");
+  const H = rows[0].map(h=>String(h).trim().toLowerCase());
+  const col = (...keys) => H.findIndex(h=>keys.some(k=>h.includes(k)));
+  const C = { date:col("date"), time:col("time"), moment:col("moment"), format:col("format"), pillar:col("pillar"),
+    text:col("on-image","on screen","on-screen"), visual:col("slides","visual"), caption:col("caption"),
+    tags:col("hashtag"), status:col("status") };
+  if(C.date<0 || C.format<0) throw new Error("Couldn't find the Date and Format columns in the header row.");
+  let added = 0, updated = 0, kept = 0, bad = 0;
+  rows.slice(1).forEach(r=>{
+    const g = i => i>=0 ? String(r[i]||"").trim() : "";
+    const date = parseDateCell(g(C.date)); if(!date){ bad++; return; }
+    const time = parseTimeCell(g(C.time)), format = formatFromCell(g(C.format));
+    const key = date+"|"+time+"|"+format;
+    let p = S.posts.find(x=>x.importKey===key);
+    if(p && (anyPosted(p) || p.pz)){ kept++; return; }   // never overwrite something already scheduled or posted
+    if(!p){ p = blankPost(format); p.importKey = key; S.posts.push(p); added++; } else updated++;
+    const rawPillar = g(C.pillar);
+    p.pillar = S.pillars.find(x=>x.toLowerCase()===rawPillar.toLowerCase()) || rawPillar;
+    p.format = format; p.date = date; p.time = time;
+    const onImage = g(C.text), vis = g(C.visual);
+    if(format==="carousel"){
+      const sl = slidesFromCell(vis);
+      p.hook = onImage || sl[0] || "";
+      const rest = sl.length ? sl.slice(1) : [];
+      if(rest.length) p.slides = rest.map(t=>({id:uid(), t, d:""}));
+      p.visual = sl.length ? "" : vis;
+    } else {
+      p.hook = onImage; p.visual = vis;
+    }
+    const moment = g(C.moment);
+    p.title = moment ? moment+" — "+(onImage.split("\n")[0]||fmtName(format)) : "";
+    p.caption = g(C.caption); p.cta = "";
+    const ts = setForPillar(p.pillar); p.tagSet = ts ? ts.id : "";
+    p.extraTags = g(C.tags);
+    const st = g(C.status).toLowerCase();
+    if(/post|publish|live/.test(st)){ PLATS.forEach(([k])=>{ if(p.plats[k] && !p.posted[k]) p.posted[k] = parseYmd(date).getTime(); }); }
+    p.stage = /ready|done|made|edited|complete/.test(st) ? "ready" : "draft";
+    p.updated = Date.now();
+  });
+  save();
+  return {added, updated, kept, bad};
+}
+function runImport(text){
+  const m = el("plan-msg");
+  try{
+    const r = importPlan(text);
+    render();
+    const parts = [];
+    if(r.added) parts.push(r.added+" added");
+    if(r.updated) parts.push(r.updated+" updated");
+    if(r.kept) parts.push(r.kept+" left alone (already scheduled or posted)");
+    if(r.bad) parts.push(r.bad+" rows skipped (no readable date)");
+    const msg = parts.length ? "Imported: "+parts.join(", ")+"." : "Nothing to import.";
+    const m2 = el("plan-msg"); if(m2){ m2.textContent = msg; m2.style.color = "var(--good)"; }
+    toast("Plan imported");
+    if(pzReady() && pzMapped()) pzSync().then(x=>{ if(x.linked){ render(); toast("Linked "+x.linked+" to posts already in Postiz"); } }).catch(()=>{});
+  }catch(err){ if(m){ m.textContent = err.message; m.style.color = "var(--bad)"; } }
+}
+
 function kitPostiz(){
   const c = relayCfg(), ch = S.postiz.channels;
   const sel = k => `<select data-pzmap="${k}"><option value="">Don't post here</option>${ch.map(x=>
@@ -1169,7 +1354,7 @@ document.addEventListener("click", e=>{
   let rerender = true;
 
   switch(a){
-    case "tab": closeEditor(); view = v; window.scrollTo(0,0); break;
+    case "tab": closeEditor(); view = v; window.scrollTo(0,0); if(v==="plan"||v==="today") pzAutoCheck(); break;
     case "goplan": {
       const days = Math.round((parseYmd(b.dataset.date) - weekStart(0)) / 864e5);
       weekOff = Math.floor(days / 7); view = "plan"; window.scrollTo(0,0); break;
@@ -1256,6 +1441,10 @@ document.addEventListener("click", e=>{
         .catch(err=>{ busy(b, false, "Connect"); if(m){ m.textContent = err.message; m.style.color = "var(--bad)"; } });
       return;
     }
+    case "plan-import": {
+      const t = el("plan-paste").value; if(!t.trim()){ toast("Paste the rows first"); return; }
+      runImport(t); return;
+    }
     case "pz-forget": setRelayCfg({}); renderKit(); toast("Removed from this device"); return;
     case "pz-schedule": if(!p) return; {
       busy(b, true, "Scheduling…");
@@ -1271,9 +1460,10 @@ document.addEventListener("click", e=>{
       return;
     }
     case "pz-refresh": {
-      busy(b, true, "Checking…");
-      pzRefresh().then(n=>{ render(); if(editing) renderEditor(); toast(n ? "Updated from Postiz" : "No changes yet"); })
-        .catch(err=>{ busy(b, false, "Check Postiz"); toast(err.message); });
+      const label = b.textContent; busy(b, true, "Checking…");
+      pzSync().then(r=>{ render(); if(editing) renderEditor();
+          toast(r.linked ? "Linked "+r.linked+" plan post"+(r.linked===1?"":"s")+" to Postiz" : r.changed ? "Updated from Postiz" : "Up to date with Postiz"); })
+        .catch(err=>{ busy(b, false, label); toast(err.message); });
       return;
     }
     default: rerender = false;
@@ -1324,6 +1514,11 @@ document.addEventListener("change", e=>{
     const lbl = e.target.closest("label"); if(lbl) lbl.style.opacity = ".5";
     pzUpload(p, files).then(()=>{ if(editing===p.id) renderEditor(); toast("Uploaded"); })
       .catch(err=>{ if(editing===p.id){ renderEditor(); const m = el("media-msg"); if(m){ m.textContent = err.message; m.style.color = "var(--bad)"; } } });
+    return;
+  }
+  if(e.target.id==="plan-file"){
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader(); r.onload = () => runImport(r.result); r.readAsText(f); e.target.value = "";
     return;
   }
   if(e.target.id!=="import-file") return;
