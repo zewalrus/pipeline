@@ -322,6 +322,7 @@ function defaults(){
       "Type YES if you're claiming this"
     ],
     ctas:[
+      JOURNAL_CTA,
       "Save this for when you need a reminder ✨",
       "Share this with someone who needs it today 💫",
       "Comment 'MINE' to claim it 🙏",
@@ -346,6 +347,9 @@ function blankPost(format){
     created:Date.now(), updated:Date.now()
   };
 }
+
+/* Comment-keyword CTA that triggers the ManyChat DM for the free Scripting Journal. */
+const JOURNAL_CTA = "Comment JOURNAL and I'll send you my free scripting journal ✨";
 
 /* One hashtag set per pillar, named the same, so picking a pillar picks its set. */
 const DEFAULT_TAGSETS = [
@@ -408,6 +412,13 @@ function normalize(d){
   ["pillars","hooks","ctas","tagSets","ideas","posts"].forEach(k=>{ if(!Array.isArray(out[k])) out[k] = D[k]; });
   migratePillars(out);
   migrateTagSets(out);
+  /* One-time: add the free-journal call to action to existing saves. The flag
+     stops it coming back if the user deletes it. */
+  out.flags = Object.assign({}, d.flags);
+  if(!out.flags.journalCta){
+    if(!out.ctas.includes(JOURNAL_CTA)) out.ctas = [JOURNAL_CTA, ...out.ctas];
+    out.flags.journalCta = true;
+  }
   out.posts = out.posts.map(p=>{
     const b = blankPost(p.format);
     const q = Object.assign(b, p);
