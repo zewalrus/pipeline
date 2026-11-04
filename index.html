@@ -187,6 +187,17 @@ details.more summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--a
 .plat-h{font-weight:700;margin:12px 0 6px;display:flex;align-items:center;gap:6px}
 .plat-h:first-child{margin-top:0}
 
+.pzb{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px}
+.pzbox{background:var(--accent-soft);border-radius:10px;padding:12px;margin-bottom:12px}
+.pzbox .row{margin-top:8px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-bottom:10px}
+.mitem{position:relative;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:var(--sunk);border:1px solid var(--line)}
+.mitem img,.mitem video{width:100%;height:100%;object-fit:cover;display:block}
+.mitem .mn{position:absolute;top:5px;left:5px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}
+.mitem .mt{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;padding:4px;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+.mitem .mt button{min-height:28px;min-width:28px;padding:2px 6px;font-size:13px;background:rgba(255,255,255,.9);color:#221B2E;border:0}
+.filebtn{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border-radius:10px;border:1px dashed var(--accent);
+  color:var(--accent);font-weight:700;font-size:14px;cursor:pointer}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;
   background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600;
   display:none;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.25)}
@@ -318,6 +329,7 @@ function defaults(){
       {id:uid(), name:"Love", tags:"#selflove #manifestlove #loveaffirmations #lawofattraction #healing"},
       {id:uid(), name:"Spiritual", tags:"#universe #synchronicity #angelnumbers #highvibes #spiritualawakening"}
     ],
+    postiz:{ ig:null, fb:null, channels:[] },
     ideas:[], posts:[]
   };
 }
@@ -331,6 +343,7 @@ function blankPost(format){
     slides:[{id:uid(),t:"",d:""},{id:uid(),t:"",d:""}],
     caption:"", fbCaption:"", cta:"", tagSet:"", extraTags:"",
     posted:{ig:0, fb:0}, links:{ig:"", fb:""}, stats:{ig:{}, fb:{}},
+    media:[], pz:null,
     created:Date.now(), updated:Date.now()
   };
 }
@@ -341,6 +354,8 @@ function normalize(d){
   d = (d && typeof d === "object") ? d : {};
   const out = Object.assign({}, D, d);
   out.brand = Object.assign({}, D.brand, d.brand||{});
+  out.postiz = Object.assign({}, D.postiz, d.postiz||{});
+  if(!Array.isArray(out.postiz.channels)) out.postiz.channels = [];
   ["pillars","hooks","ctas","tagSets","ideas","posts"].forEach(k=>{ if(!Array.isArray(out[k])) out[k] = D[k]; });
   out.posts = out.posts.map(p=>{
     const b = blankPost(p.format);
@@ -351,6 +366,7 @@ function normalize(d){
     q.stats  = {ig:Object.assign({}, (p.stats||{}).ig), fb:Object.assign({}, (p.stats||{}).fb)};
     if(!Array.isArray(q.beats)) q.beats = b.beats;
     if(!Array.isArray(q.slides)) q.slides = b.slides;
+    if(!Array.isArray(q.media)) q.media = [];
     return q;
   });
   return out;
@@ -472,6 +488,158 @@ async function copyText(txt, near){
 }
 
 /* ============================================================
+   POSTIZ — the app talks to your Cloudflare relay (relay/worker.js),
+   which adds the Postiz API key. Relay URL + passcode stay on this
+   device only; they are never synced.
+   ============================================================ */
+const RKEY = "studio:relay";
+function relayCfg(){ try{ return JSON.parse(localStorage.getItem(RKEY)||"{}")||{}; }catch(e){ return {}; } }
+function setRelayCfg(c){ try{ localStorage.setItem(RKEY, JSON.stringify(c)); }catch(e){} }
+const pzReady = () => { const c = relayCfg(); return !!(c.url && c.pass); };
+const pzMapped = () => PLATS.some(([k])=>S.postiz[k]);
+const platOfChannel = id => (PLATS.find(([k])=>S.postiz[k] && S.postiz[k].id===id)||[])[0];
+
+async function pz(path, opts={}){
+  const c = relayCfg();
+  if(!c.url || !c.pass) throw new Error("Set up Postiz in the Kit tab first.");
+  const headers = {"X-Studio-Pass": c.pass};
+  if(opts.json !== undefined) headers["Content-Type"] = "application/json";
+  let res;
+  try{
+    res = await fetch(c.url.replace(/\/+$/,"") + path, {
+      method: opts.method||"GET", headers,
+      body: opts.json !== undefined ? JSON.stringify(opts.json) : opts.body
+    });
+  }catch(e){ throw new Error("Couldn't reach the relay. Check the relay URL and your connection."); }
+  const txt = await res.text(); let data; try{ data = JSON.parse(txt); }catch(e){ data = txt; }
+  if(!res.ok){
+    if(res.status===429) throw new Error("Postiz says too many requests. Wait a bit and try again.");
+    let m = (data && typeof data==="object") ? (data.error || data.message) : data;
+    if(Array.isArray(m)) m = m.join(", ");
+    throw new Error(String(m || ("Error "+res.status)).slice(0,240));
+  }
+  return data;
+}
+
+async function pzConnect(){
+  const url = el("pz-url").value.trim(), pass = el("pz-pass").value;
+  if(!/^https:\/\//.test(url)) throw new Error("The relay URL should start with https://");
+  if(!pass) throw new Error("Enter the passcode you saved in Cloudflare.");
+  setRelayCfg({url, pass});
+  const list = await pz("/public/v1/integrations");
+  const chans = (Array.isArray(list) ? list : (list.integrations||[])).map(c=>({
+    id:c.id, name:c.name||c.display||c.identifier, identifier:c.identifier||c.providerIdentifier||"", disabled:!!c.disabled
+  }));
+  S.postiz.channels = chans;
+  const pick = (k, test) => {
+    const keep = S.postiz[k] && chans.find(c=>c.id===S.postiz[k].id);
+    S.postiz[k] = keep || chans.find(c=>test(c.identifier) && !c.disabled) || null;
+  };
+  pick("ig", i=>i.startsWith("instagram"));
+  pick("fb", i=>i==="facebook");
+  save();
+  return chans.length;
+}
+
+function mediaProblem(p){
+  const m = p.media, vids = m.filter(x=>/^video/.test(x.type||"") || /\.(mp4|mov|m4v|webm)$/i.test(x.path)).length;
+  if(p.format==="reel"){ if(m.length!==1 || vids!==1) return "A reel needs exactly one video."; }
+  else if(p.format==="carousel"){ if(m.length<2) return "A carousel needs at least 2 photos or videos."; if(m.length>CAROUSEL_MAX) return "A carousel can have at most "+CAROUSEL_MAX+" items."; }
+  else if(m.length!==1) return "An image post needs exactly one image.";
+  return "";
+}
+
+async function pzSchedule(p){
+  if(!pzMapped()) throw new Error("Pick your Instagram and Facebook accounts in Kit → Postiz scheduling.");
+  if(!p.date || !p.time) throw new Error("Set a post date and time first.");
+  const when = new Date(p.date+"T"+p.time);
+  if(when.getTime() < Date.now()+60e3) throw new Error("Pick a time in the future.");
+  const mp = mediaProblem(p); if(mp) throw new Error(mp);
+  const targets = activePlats(p).filter(([k])=>S.postiz[k]);
+  if(!targets.length) throw new Error("This post isn't set to go to any connected account.");
+  const posts = targets.map(([k])=>{
+    const ch = S.postiz[k];
+    const settings = ch.identifier.startsWith("instagram")
+      ? {__type:ch.identifier, post_type:"post", collaborators:[]}
+      : {__type:ch.identifier};
+    return { integration:{id:ch.id}, settings,
+      value:[{ content:textFor(p,k), image:p.media.map(m=>({id:m.id, path:m.path})) }] };
+  });
+  const res = await pz("/public/v1/posts", {method:"POST", json:{
+    type:"schedule", date:when.toISOString(), shortLink:false, tags:[], posts
+  }});
+  const arr = Array.isArray(res) ? res : (res && (res.posts||res.data)) || [];
+  const ids = arr.map(r=>{
+    const integ = typeof r.integration==="object" ? (r.integration||{}).id : r.integration;
+    return {id:r.postId||r.id, plat:platOfChannel(integ)||""};
+  }).filter(r=>r.id);
+  p.pz = {at:Date.now(), date:when.toISOString(), ids, state:{}, err:""};
+  p.stage = "ready";
+  touch(p);
+}
+
+async function pzCancel(p){
+  let ok = false, last = null;
+  for(const r of ((p.pz && p.pz.ids) || []).filter(r=>p.pz.state[r.plat]!=="PUBLISHED")){
+    try{ await pz("/public/v1/posts/"+encodeURIComponent(r.id), {method:"DELETE"}); ok = true; }catch(e){ last = e; }
+  }
+  if(!ok && last) throw last;
+  p.pz = null; touch(p);
+}
+
+const PZ_LAST = "studio:pz-last";
+async function pzRefresh(){
+  const L = S.posts.filter(p=>p.pz && p.pz.ids && p.pz.ids.length && !isPosted(p));
+  if(!L.length) return 0;
+  const ts = L.map(p=>Date.parse(p.pz.date)||Date.now());
+  const q = "?startDate="+encodeURIComponent(new Date(Math.min(...ts)-2*864e5).toISOString())+
+            "&endDate="+encodeURIComponent(new Date(Math.max(...ts)+2*864e5).toISOString());
+  const data = await pz("/public/v1/posts"+q);
+  const list = Array.isArray(data) ? data : (data && data.posts) || [];
+  let changed = 0;
+  L.forEach(p=>{
+    p.pz.ids.forEach(r=>{
+      const f = list.find(x=>x.id===r.id); if(!f) return;
+      const st = String(f.state||f.status||"").toUpperCase();
+      const k = r.plat || platOfChannel(f.integration && f.integration.id) || platOfChannel(f.integrationId);
+      if(!k) return;
+      if(p.pz.state[k]!==st){ p.pz.state[k] = st; changed++; }
+      if(st==="PUBLISHED" && !p.posted[k]){
+        p.posted[k] = Date.parse(f.publishDate) || Date.now();
+        if(f.releaseURL) p.links[k] = f.releaseURL;
+        changed++;
+      }
+      if(st==="ERROR") p.pz.err = f.error || "Postiz couldn't publish this. Open Postiz to see why.";
+    });
+  });
+  try{ localStorage.setItem(PZ_LAST, String(Date.now())); }catch(e){}
+  if(changed) save();
+  return changed;
+}
+/* Check quietly when the app opens, if something should have gone out by now. */
+async function pzAutoCheck(){
+  if(!pzReady()) return;
+  let last = 0; try{ last = Number(localStorage.getItem(PZ_LAST))||0; }catch(e){}
+  if(Date.now()-last < 15*60e3) return;
+  const due = S.posts.some(p=>p.pz && !isPosted(p) && Date.parse(p.pz.date) < Date.now());
+  if(!due) return;
+  try{ if(await pzRefresh()){ render(); if(editing) renderEditor(); } }catch(e){}
+}
+async function pzUpload(p, files){
+  const msg = el("media-msg");
+  for(let i=0;i<files.length;i++){
+    const f = files[i];
+    if(msg) msg.textContent = "Uploading "+(i+1)+" of "+files.length+"… keep the app open";
+    const fd = new FormData(); fd.append("file", f, f.name || ("upload-"+Date.now()));
+    const r = await pz("/public/v1/upload", {method:"POST", body:fd});
+    if(!r || !r.path) throw new Error("Postiz didn't return a file link.");
+    p.media.push({id:r.id||uid(), path:r.path, name:f.name||"", type:f.type||r.type||""});
+    touch(p);
+  }
+}
+const busy = (b, on, label) => { if(!b) return; b.disabled = on; if(label) b.textContent = label; };
+
+/* ============================================================
    VIEW STATE
    ============================================================ */
 let view = "today", editing = null, weekOff = 0, sparkIdx = Math.floor(Math.random()*SPARKS.length);
@@ -496,13 +664,13 @@ function postCard(p){
   return `<button class="pc" data-fmt="${p.format}" data-a="open" data-id="${p.id}">
     <span class="ft ${p.format}">${fmtName(p.format)}</span> <span class="stage ${st}">${st}</span>
     <span class="t">${esc(titleOf(p))}</span>
-    <span class="m">${platBadges(p)}${p.pillar?"<span>· "+esc(p.pillar)+"</span>":""}${when?"<span>· "+when+"</span>":""}</span>
+    <span class="m">${platBadges(p)}${p.pz?`<span class="pzb">Postiz</span>`:""}${p.pillar?"<span>· "+esc(p.pillar)+"</span>":""}${when?"<span>· "+when+"</span>":""}</span>
   </button>`;
 }
 function quickCard(p){
-  const btns = activePlats(p).map(([k,,s])=>`
+  const btns = p.pz ? `<span class="pzb">Scheduled in Postiz</span>${p.pz.err?`<span class="small" style="color:var(--bad)">${esc(p.pz.err)}</span>`:""}` : activePlats(p).map(([k,,s])=>`
     <button class="tiny ghost" data-a="copy" data-what="${k}" data-id="${p.id}">Copy ${s}</button>
-    <button class="tiny ${p.posted[k]?"done":"ghost"}" data-a="posted" data-pl="${k}" data-id="${p.id}">${p.posted[k]?"✓ Posted":"Mark posted"} ${s}</button>`).join("");
+    <button class="tiny ${p.posted[k]?"done":"ghost"}" data-a="posted" data-pl="${k}" data-id="${p.id}">${p.posted[k]?"✓ Posted":"Mark posted"} ${s}</button>`).join("") + "";
   return `<div class="qc" data-fmt="${p.format}">
     <button class="open" data-a="open" data-id="${p.id}">
       <span class="ft ${p.format}">${fmtName(p.format)}</span> <span class="small">${p.time?time12(p.time):"No time set"}${p.date && p.date!==today()?" · "+nice(p.date):""}</span>
@@ -542,7 +710,8 @@ function renderToday(){
         <span class="grow" style="text-align:right">${empties?empties+" open slot"+(empties===1?"":"s"):"All filled ✨"}</span></div>
     </div>
 
-    <h2>Post today</h2>
+    <div class="row" style="justify-content:space-between;margin:0"><h2>Post today</h2>
+      ${pzReady() && S.posts.some(p=>p.pz && !isPosted(p)) ? `<button class="ghost tiny" data-a="pz-refresh">Check Postiz</button>` : ""}</div>
     <div class="list" style="margin:8px 0 18px">${due.length ? due.map(quickCard).join("") :
       `<div class="empty">Nothing scheduled for today.<div class="row" style="justify-content:center"><button class="tiny" data-a="new" data-date="${t}">+ New post for today</button><button class="tiny ghost" data-a="tab" data-v="plan">Open plan</button></div></div>`}</div>
 
@@ -717,12 +886,30 @@ function renderKit(){
       <textarea data-lines="ctas" rows="4">${esc(S.ctas.join("\n"))}</textarea>
     </div>
 
+    ${kitPostiz()}
+
     <div class="panel">
       <h3>Backup</h3>
       <p class="small">Your work saves on this device automatically. Keep a backup too, especially if you don't use sync.</p>
       <div class="row"><button class="ghost tiny" data-a="export">Download backup</button><button class="ghost tiny" data-a="copy-backup">Copy backup</button>
         <label class="tiny ghost" style="display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-weight:600;font-size:13px;cursor:pointer;min-height:32px">Restore…<input type="file" accept="application/json,.json" id="import-file" style="display:none"></label></div>
     </div>`;
+}
+function kitPostiz(){
+  const c = relayCfg(), ch = S.postiz.channels;
+  const sel = k => `<select data-pzmap="${k}"><option value="">Don't post here</option>${ch.map(x=>
+    `<option value="${esc(x.id)}" ${S.postiz[k]&&S.postiz[k].id===x.id?"selected":""}>${esc(x.name)} (${esc(x.identifier)})${x.disabled?" — disabled":""}</option>`).join("")}</select>`;
+  return `<div class="panel">
+    <h3>Postiz scheduling</h3>
+    <p class="small">Schedules posts to your pages through your Postiz account. Set up the Cloudflare relay first: <a href="https://github.com/zewalrus/pipeline/blob/main/relay/SETUP.md" target="_blank" rel="noopener" style="color:var(--accent)">setup guide</a>.</p>
+    <label class="f">Relay URL</label><input type="url" id="pz-url" value="${esc(c.url||"")}" placeholder="https://studio-relay.yourname.workers.dev" autocomplete="off">
+    <label class="f">Passcode</label><input type="password" id="pz-pass" value="${esc(c.pass||"")}" autocomplete="off">
+    <p class="small" style="margin-top:6px">The URL and passcode stay on this device only. Enter them once on each device.</p>
+    <div class="row"><button data-a="pz-connect">${ch.length?"Reconnect":"Connect"}</button>${pzReady()?`<button class="ghost tiny" data-a="pz-forget">Forget on this device</button>`:""}</div>
+    <p class="small" id="pz-msg" style="margin-top:6px"></p>
+    ${ch.length ? `<label class="f">Instagram account</label>${sel("ig")}<label class="f">Facebook page</label>${sel("fb")}
+      <p class="small" style="margin-top:8px">Postiz limits how many requests you can make per hour. Every photo or video upload counts as one, so big carousels use more.</p>` : ""}
+  </div>`;
 }
 const tagCount = s => (s||"").split(/[\s,]+/).filter(x=>x.replace(/^#+/,"")).length;
 
@@ -784,6 +971,45 @@ function contentHtml(p){
     <label class="f">Design notes</label><textarea data-f="visual" rows="2" placeholder="Background, font, colors">${esc(p.visual)}</textarea>`;
 }
 
+function mediaHtml(p){
+  if(!pzReady()) return `<div class="panel"><h3>Media</h3><p class="small">Connect Postiz in the Kit tab to attach your video or images here and schedule automatically.</p></div>`;
+  const hint = {reel:"One video.", carousel:"2 to "+CAROUSEL_MAX+" photos or videos, in order.", image:"One image."}[p.format];
+  return `<div class="panel"><h3>Media</h3>
+    <p class="small" style="margin-bottom:8px">${hint} Files upload to your Postiz media library.</p>
+    ${p.media.length?`<div class="mgrid">${p.media.map((m,i)=>`<div class="mitem">
+      ${/^video/.test(m.type||"")||/\.(mp4|mov|m4v|webm)$/i.test(m.path)
+        ? `<video src="${esc(m.path)}" muted playsinline preload="metadata"></video>`
+        : `<img src="${esc(m.path)}" alt="" loading="lazy">`}
+      <span class="mn">${i+1}</span>
+      <div class="mt">
+        <button data-a="m-move" data-i="${i}" data-v="-1" ${i===0?"disabled":""} aria-label="Move earlier">‹</button>
+        <button data-a="m-del" data-i="${i}" aria-label="Remove">✕</button>
+        <button data-a="m-move" data-i="${i}" data-v="1" ${i===p.media.length-1?"disabled":""} aria-label="Move later">›</button>
+      </div></div>`).join("")}</div>`:""}
+    <label class="filebtn">+ Add ${p.format==="reel"?"video":p.format==="image"?"image":"photos or videos"}
+      <input type="file" id="media-file" accept="${p.format==="reel"?"video/*":p.format==="image"?"image/*":"image/*,video/*"}" ${p.format==="carousel"?"multiple":""} hidden></label>
+    <p class="small" id="media-msg" style="margin-top:6px"></p>
+  </div>`;
+}
+function pzBox(p){
+  if(!pzReady() || !pzMapped()) return "";
+  if(p.pz){
+    const st = PLATS.filter(([k])=>p.pz.state[k]).map(([k,n])=>n+": "+p.pz.state[k].toLowerCase()).join(" · ");
+    return `<div class="pzbox">
+      <b>Scheduled in Postiz</b> for ${nice(ymd(new Date(p.pz.date)))} at ${time12(String(new Date(p.pz.date).getHours()).padStart(2,"0")+":"+pad(new Date(p.pz.date).getMinutes()))}
+      ${st?`<div class="small">${esc(st)}</div>`:""}
+      ${p.pz.err?`<div class="small" style="color:var(--bad)">${esc(p.pz.err)}</div>`:""}
+      <div class="small" style="margin-top:4px">Edits made here after scheduling aren't sent to Postiz. To change it, cancel and schedule again.</div>
+      <div class="row"><button class="ghost tiny" data-a="pz-refresh">Check status</button><button class="ghost tiny danger" data-a="pz-cancel" data-id="${p.id}">Cancel in Postiz</button></div>
+      <p class="small" id="pz-post-msg"></p></div>`;
+  }
+  const prob = (!p.date||!p.time) ? "Set a date and time above." : mediaProblem(p);
+  return `<div class="pzbox">
+    <button data-a="pz-schedule" data-id="${p.id}" ${prob?"disabled":""}>Schedule with Postiz</button>
+    <p class="small" id="pz-post-msg" style="margin-top:6px">${prob?esc(prob):"Sends this post to "+activePlats(p).filter(([k])=>S.postiz[k]).map(([,n])=>n).join(" and ")+" for "+nice(p.date)+" at "+time12(p.time)+"."}</p>
+    <p class="small">Or post it yourself:</p></div>`;
+}
+
 function renderEditor(){
   const p = cur(); if(!p){ closeEditor(); return; }
   const plats = activePlats(p);
@@ -814,6 +1040,8 @@ function renderEditor(){
 
     <div class="panel">${contentHtml(p)}</div>
 
+    ${mediaHtml(p)}
+
     <div class="panel">
       <h3>Caption</h3>
       <textarea data-f="caption" rows="5" placeholder="Write the caption. The call to action and hashtags are added when you copy.">${esc(p.caption)}</textarea>
@@ -833,6 +1061,7 @@ function renderEditor(){
 
     <div class="panel" id="post-panel">
       <h3>Post it</h3>
+      ${pzBox(p)}
       ${plats.length ? plats.map(([k,n])=>`
         <div class="plat-h"><span class="pb ${k} posted"><span>${k.toUpperCase()}</span></span>${n}</div>
         <div class="row" style="margin-top:0">
@@ -949,7 +1178,7 @@ document.addEventListener("click", e=>{
     case "dup": if(!p) return; {
       const c = JSON.parse(JSON.stringify(p));
       Object.assign(c, {id:uid(), title:(p.title||titleOf(p))+" (copy)", date:"", time:"", stage:"draft",
-        posted:{ig:0,fb:0}, links:{ig:"",fb:""}, stats:{ig:{},fb:{}}, created:Date.now(), updated:Date.now()});
+        posted:{ig:0,fb:0}, links:{ig:"",fb:""}, stats:{ig:{},fb:{}}, pz:null, created:Date.now(), updated:Date.now()});
       S.posts.push(c); save(); render(); openEditor(c.id); toast("Duplicated — set a new date"); return;
     }
     case "del": if(!p) return;
@@ -967,6 +1196,38 @@ document.addEventListener("click", e=>{
       setTimeout(()=>{ URL.revokeObjectURL(u); l.remove(); }, 500); return;
     }
     case "copy-backup": copyText(JSON.stringify(S), b.closest(".row")); return;
+
+    case "m-del": if(!p) return; p.media.splice(+b.dataset.i,1); touch(p); renderEditor(); return;
+    case "m-move": if(!p) return; {
+      const L = p.media, i = +b.dataset.i, j = i + Number(v);
+      if(j<0 || j>=L.length) return; [L[i],L[j]] = [L[j],L[i]]; touch(p); renderEditor(); return;
+    }
+    case "pz-connect": {
+      const m = el("pz-msg"); busy(b, true, "Connecting…");
+      pzConnect().then(n=>{ renderKit(); const m2 = el("pz-msg"); if(m2) m2.textContent = "Connected. Found "+n+" account"+(n===1?"":"s")+" in Postiz."; })
+        .catch(err=>{ busy(b, false, "Connect"); if(m){ m.textContent = err.message; m.style.color = "var(--bad)"; } });
+      return;
+    }
+    case "pz-forget": setRelayCfg({}); renderKit(); toast("Removed from this device"); return;
+    case "pz-schedule": if(!p) return; {
+      busy(b, true, "Scheduling…");
+      pzSchedule(p).then(()=>{ renderEditor(); render(); toast("Scheduled in Postiz ✨"); })
+        .catch(err=>{ busy(b, false, "Schedule with Postiz"); const m = el("pz-post-msg"); if(m){ m.textContent = err.message; m.style.color = "var(--bad)"; } });
+      return;
+    }
+    case "pz-cancel": if(!p) return; {
+      if(!confirm("Cancel this post in Postiz? It won't be published.")) return;
+      busy(b, true, "Cancelling…");
+      pzCancel(p).then(()=>{ renderEditor(); render(); toast("Cancelled in Postiz"); })
+        .catch(err=>{ busy(b, false, "Cancel in Postiz"); const m = el("pz-post-msg"); if(m) m.textContent = err.message; });
+      return;
+    }
+    case "pz-refresh": {
+      busy(b, true, "Checking…");
+      pzRefresh().then(n=>{ render(); if(editing) renderEditor(); toast(n ? "Updated from Postiz" : "No changes yet"); })
+        .catch(err=>{ busy(b, false, "Check Postiz"); toast(err.message); });
+      return;
+    }
     default: rerender = false;
   }
   if(rerender) render();
@@ -986,6 +1247,10 @@ document.addEventListener("input", e=>{
   if(p && t.dataset.stat){ const [pl,m] = t.dataset.stat.split("."); p.stats[pl][m] = t.value==="" ? "" : Number(t.value); touch(p); return; }
   if(p && t.dataset.link){ p.links[t.dataset.link] = t.value; touch(p); return; }
   if(t.dataset.kit){ S.brand[t.dataset.kit] = t.value; save(); if(t.dataset.kit==="name") el("hdr-name").textContent = t.value.trim()||"Theme Page Studio"; return; }
+  if(t.dataset.pzmap){
+    const ch = S.postiz.channels.find(c=>c.id===t.value);
+    S.postiz[t.dataset.pzmap] = ch || null; save(); return;
+  }
   if(t.dataset.kitn){ S.brand[t.dataset.kitn] = t.value==="" ? "" : Number(t.value); save(); return; }
   if(t.dataset.lines){ S[t.dataset.lines] = t.value.split("\n").map(s=>s.trim()).filter(Boolean); save(); return; }
   if(t.dataset.ts){
@@ -996,6 +1261,13 @@ document.addEventListener("input", e=>{
 });
 
 document.addEventListener("change", e=>{
+  if(e.target.id==="media-file"){
+    const p = cur(), files = [...e.target.files]; if(!p || !files.length) return;
+    const lbl = e.target.closest("label"); if(lbl) lbl.style.opacity = ".5";
+    pzUpload(p, files).then(()=>{ if(editing===p.id) renderEditor(); toast("Uploaded"); })
+      .catch(err=>{ if(editing===p.id){ renderEditor(); const m = el("media-msg"); if(m){ m.textContent = err.message; m.style.color = "var(--bad)"; } } });
+    return;
+  }
   if(e.target.id!=="import-file") return;
   const f = e.target.files[0]; if(!f) return;
   const r = new FileReader();
@@ -1012,6 +1284,8 @@ document.addEventListener("change", e=>{
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && editing){ closeEditor(); render(); } });
 
 load();
+pzAutoCheck();
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") pzAutoCheck(); });
 
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>

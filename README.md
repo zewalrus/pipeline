@@ -8,4 +8,6 @@ A phone-first planner for running theme pages on Instagram and Facebook.
 - **Plan**: a weekly calendar that flags days with no post
 - **Kit**: brand settings, hashtag sets, content pillars, hook bank, calls to action, backup and sync
 
+Scheduling: posts can be scheduled through Postiz via a small Cloudflare relay. See [relay/SETUP.md](relay/SETUP.md).
+
 Install it from the browser (Add to Home Screen). Sync uses Firebase. Settings are in `firebase-config.js`.
