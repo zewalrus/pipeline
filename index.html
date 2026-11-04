@@ -117,7 +117,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .pc .t{font-weight:700;font-size:15px;margin:5px 0 4px;line-height:1.3;display:block}
 .pc .m{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
 .stage{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-.stage.ready{color:var(--good)} .stage.posted,.stage.postiz{color:var(--accent)}
+.stage.ready{color:var(--good)} .stage.posted,.stage.postiz,.stage.meta{color:var(--accent)}
+.rc .metabtn{margin-top:-2px;width:100%;border-top-left-radius:0;border-top-right-radius:0}
+.rc .pc{border-bottom-left-radius:0;border-bottom-right-radius:0}
 
 .qc{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--reel);border-radius:var(--r);padding:11px 12px}
 .qc[data-fmt=carousel]{border-left-color:var(--carousel)} .qc[data-fmt=image]{border-left-color:var(--image)}
@@ -343,7 +345,7 @@ function blankPost(format){
     slides:[{id:uid(),t:"",d:""},{id:uid(),t:"",d:""}],
     caption:"", fbCaption:"", cta:"", tagSet:"", extraTags:"",
     posted:{ig:0, fb:0}, links:{ig:"", fb:""}, stats:{ig:{}, fb:{}},
-    media:[], pz:null,
+    media:[], pz:null, meta:0,
     created:Date.now(), updated:Date.now()
   };
 }
@@ -499,8 +501,24 @@ const activePlats = p => PLATS.filter(([k])=>p.plats[k]);
 const isPosted = p => { const a = activePlats(p); return a.length>0 && a.every(([k])=>p.posted[k]); };
 const anyPosted = p => PLATS.some(([k])=>p.posted[k]);
 /* A date alone doesn't mean scheduled: stage is posted, queued in Postiz, or draft/ready. */
-const stageOf = p => isPosted(p) ? "posted" : p.pz ? "postiz" : p.stage;
-const STAGE_LABEL = {draft:"draft", ready:"ready", postiz:"in Postiz", posted:"posted"};
+const isMeta = p => p.format==="reel" && !!p.meta;
+const stageOf = p => isPosted(p) ? "posted" : p.pz ? "postiz" : isMeta(p) ? "meta" : p.stage;
+const STAGE_LABEL = {draft:"draft", ready:"ready", postiz:"in Postiz", meta:"in Business Suite", posted:"posted"};
+/* Still needs work: not posted and not scheduled anywhere. */
+const isTodo = p => ["draft","ready"].includes(stageOf(p));
+/* Reels scheduled in Business Suite get published by Meta, so once their time
+   has passed, mark them posted on the platforms they were set for. */
+function metaAutoPost(){
+  let n = 0;
+  S.posts.forEach(p=>{
+    if(!isMeta(p) || isPosted(p) || !p.date) return;
+    const at = new Date(p.date+"T"+(p.time||"23:59")).getTime();
+    if(at > Date.now()) return;
+    activePlats(p).forEach(([k])=>{ if(!p.posted[k]){ p.posted[k] = at; n++; } });
+  });
+  if(n) save();
+  return n;
+}
 const titleOf = p => (p.title||"").trim() || (p.hook||"").trim().split("\n")[0] || ("Untitled "+fmtName(p.format).toLowerCase());
 const num = v => Number(v)||0;
 const viewsOf = p => PLATS.reduce((s,[k])=>s+num(p.stats[k].views),0);
@@ -830,10 +848,14 @@ function postCard(p){
     <span class="m">${platBadges(p)}${p.pz?`<span class="pzb">Postiz</span>`:""}${p.pillar?"<span>· "+esc(p.pillar)+"</span>":""}${when?"<span>· "+when+"</span>":""}</span>
   </button>`;
 }
+function metaBtn(p, cls){
+  if(p.format!=="reel" || p.pz || isPosted(p)) return "";
+  return `<button class="tiny ${p.meta?"done":"ghost"} ${cls||""}" data-a="meta" data-id="${p.id}">${p.meta?"✓ Scheduled in Business Suite":"Mark scheduled in Business Suite"}</button>`;
+}
 function quickCard(p){
-  const btns = p.pz ? `<span class="pzb">Scheduled in Postiz</span>${p.pz.err?`<span class="small" style="color:var(--bad)">${esc(p.pz.err)}</span>`:""}` : activePlats(p).map(([k,,s])=>`
+  const btns = isMeta(p) && !isPosted(p) ? metaBtn(p) : p.pz ? `<span class="pzb">Scheduled in Postiz</span>${p.pz.err?`<span class="small" style="color:var(--bad)">${esc(p.pz.err)}</span>`:""}` : activePlats(p).map(([k,,s])=>`
     <button class="tiny ghost" data-a="copy" data-what="${k}" data-id="${p.id}">Copy ${s}</button>
-    <button class="tiny ${p.posted[k]?"done":"ghost"}" data-a="posted" data-pl="${k}" data-id="${p.id}">${p.posted[k]?"✓ Posted":"Mark posted"} ${s}</button>`).join("") + "";
+    <button class="tiny ${p.posted[k]?"done":"ghost"}" data-a="posted" data-pl="${k}" data-id="${p.id}">${p.posted[k]?"✓ Posted":"Mark posted"} ${s}</button>`).join("") + metaBtn(p);
   return `<div class="qc" data-fmt="${p.format}">
     <button class="open" data-a="open" data-id="${p.id}">
       <span class="ft ${p.format}">${fmtName(p.format)}</span> <span class="small">${p.time?time12(p.time):"No time set"}${p.date && p.date!==today()?" · "+nice(p.date):""}</span>
@@ -867,7 +889,7 @@ function renderToday(){
   }).join("");
 
   const due = S.posts.filter(p=>p.date===t).sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
-  const missed = S.posts.filter(p=>p.date && p.date<t && !isPosted(p)).sort((a,b)=>a.date.localeCompare(b.date));
+  const missed = S.posts.filter(p=>p.date && p.date<t && !isPosted(p) && !isMeta(p)).sort((a,b)=>a.date.localeCompare(b.date));
   const weekAgo = Date.now() - 7*864e5;
   const counts = {
     ideas:S.ideas.length,
@@ -961,7 +983,8 @@ function renderIdeas(){
 function renderPosts(){
   const q = PF.q.toLowerCase();
   const list = S.posts.filter(p=>{
-    if(PF.stage!=="all" && stageOf(p)!==PF.stage && !(PF.stage==="ready" && stageOf(p)==="postiz")) return false;
+    if(PF.stage==="todo"){ if(!isTodo(p)) return false; }
+    else if(PF.stage!=="all" && stageOf(p)!==PF.stage) return false;
     if(PF.format!=="all" && p.format!==PF.format) return false;
     if(q && ![p.title,p.hook,p.caption,p.pillar,p.cta].join(" ").toLowerCase().includes(q)) return false;
     return true;
@@ -971,7 +994,7 @@ function renderPosts(){
     if(pa) return postedAt(b)-postedAt(a);
     return (a.date||"9999").localeCompare(b.date||"9999") || b.updated-a.updated;
   });
-  const stages = [["all","All"],["draft","Drafts"],["ready","Ready"],["postiz","In Postiz"],["posted","Posted"]];
+  const stages = [["all","All"],["todo","To do"],["draft","Drafts"],["ready","Ready"],["meta","In Business Suite"],["postiz","In Postiz"],["posted","Posted"]];
   el("v-posts").innerHTML = `
     <h2>Posts</h2>
     <div class="row" style="margin:6px 0 14px">${FORMATS.map(([k,n])=>`<button class="tiny" data-a="new" data-fmt="${k}">+ ${n}</button>`).join("")}</div>
@@ -997,10 +1020,12 @@ function renderPlan(){
       <div class="dh"><b>${DOW[d.getDay()]} ${d.getDate()}</b><span class="small">${MON[d.getMonth()]}${k===t?" · today":""}</span>
         <button class="tiny ghost" data-a="new" data-date="${k}">+ Add</button></div>
       ${gaps?`<div style="margin-bottom:6px">${gaps}</div>`:""}
-      <div class="list">${posts.map(postCard).join("")}${extFor(k).map(extCard).join("")}</div></div>`;
+      <div class="list">${posts.map(p=>metaBtn(p) ? `<div class="rc">${postCard(p)}${metaBtn(p,"metabtn")}</div>` : postCard(p)).join("")}${extFor(k).map(extCard).join("")}</div></div>`;
   }).join("");
   const unscheduled = S.posts.filter(p=>!p.date && !isPosted(p) && p.stage==="ready");
-  const end = addDays(ws,6);
+  const end = addDays(ws,6), wsK = ymd(ws), weK = ymd(end);
+  const wk = S.posts.filter(p=>p.date>=wsK && p.date<=weK);
+  const reels = wk.filter(p=>p.format==="reel"), reelsLeft = reels.filter(isTodo).length, allLeft = wk.filter(isTodo).length;
   el("v-plan").innerHTML = `
     <h2>Plan</h2>
     <div class="row" style="margin:6px 0 16px">
@@ -1011,6 +1036,10 @@ function renderPlan(){
     </div>
     ${pzReady() && pzMapped() ? `<div class="row" style="margin:-6px 0 14px"><span class="small grow">${pzExt&&pzExt.at?"Postiz checked "+time12(pad(new Date(pzExt.at).getHours())+":"+pad(new Date(pzExt.at).getMinutes())):"Not checked with Postiz yet"}</span>
       <button class="ghost tiny" data-a="pz-refresh">Refresh from Postiz</button></div>` : ""}
+    ${wk.length ? `<div class="panel" style="padding:10px 12px"><div class="row" style="margin:0">
+      <span class="grow"><b>${reelsLeft ? reelsLeft+" of "+reels.length+" reel"+(reels.length===1?"":"s")+" still to schedule" : reels.length ? "All "+reels.length+" reels scheduled ✨" : "No reels this week"}</b><br>
+      <span class="small">${allLeft} post${allLeft===1?"":"s"} still to do this week</span></span>
+      ${allLeft ? `<button class="ghost tiny" data-a="pfgo" data-v="todo">See to-do</button>` : ""}</div></div>` : ""}
     ${days}
     <h2 style="margin-top:20px">Ready, not scheduled</h2>
     <p class="sub">Open one and give it a date to put it on the plan.</p>
@@ -1147,7 +1176,7 @@ function importPlan(text){
     const time = parseTimeCell(g(C.time)), format = formatFromCell(g(C.format));
     const key = date+"|"+time+"|"+format;
     let p = S.posts.find(x=>x.importKey===key);
-    if(p && (anyPosted(p) || p.pz)){ kept++; return; }   // never overwrite something already scheduled or posted
+    if(p && (anyPosted(p) || p.pz || p.meta)){ kept++; return; }   // never overwrite something already scheduled or posted
     if(!p){ p = blankPost(format); p.importKey = key; S.posts.push(p); added++; } else updated++;
     const rawPillar = g(C.pillar);
     p.pillar = S.pillars.find(x=>x.toLowerCase()===rawPillar.toLowerCase()) || rawPillar;
@@ -1374,7 +1403,13 @@ function renderEditor(){
 
     <div class="panel" id="post-panel">
       <h3>Post it</h3>
-      ${pzBox(p)}
+      ${p.format==="reel" ? `<div class="pzbox" style="background:var(--sunk)">
+        ${metaBtn(p) || (isPosted(p) ? `<span class="small">Posted.</span>` : `<span class="small">Scheduled in Postiz.</span>`)}
+        <p class="small" style="margin-top:6px">${isMeta(p)
+          ? "Marked as scheduled in Meta Business Suite"+(p.date?" for "+nice(p.date)+(p.time?" at "+time12(p.time):""):"")+". It'll show as posted once that time passes."
+          : "Made this reel in Canva and scheduled it in Business Suite with your audio? Tap above so it stops showing as to do."}</p>
+      </div>` : ""}
+      ${isMeta(p) ? "" : pzBox(p)}
       ${plats.length ? plats.map(([k,n])=>`
         <div class="plat-h"><span class="pb ${k} posted"><span>${k.toUpperCase()}</span></span>${n}</div>
         <div class="row" style="margin-top:0">
@@ -1492,7 +1527,7 @@ document.addEventListener("click", e=>{
     case "dup": if(!p) return; {
       const c = JSON.parse(JSON.stringify(p));
       Object.assign(c, {id:uid(), title:(p.title||titleOf(p))+" (copy)", date:"", time:"", stage:"draft",
-        posted:{ig:0,fb:0}, links:{ig:"",fb:""}, stats:{ig:{},fb:{}}, pz:null, created:Date.now(), updated:Date.now()});
+        posted:{ig:0,fb:0}, links:{ig:"",fb:""}, stats:{ig:{},fb:{}}, pz:null, meta:0, created:Date.now(), updated:Date.now()});
       S.posts.push(c); save(); render(); openEditor(c.id); toast("Duplicated — set a new date"); return;
     }
     case "del": if(!p) return;
@@ -1526,6 +1561,12 @@ document.addEventListener("click", e=>{
       const t = el("plan-paste").value; if(!t.trim()){ toast("Paste the rows first"); return; }
       runImport(t); return;
     }
+    case "meta": if(!p) return;
+      p.meta = p.meta ? 0 : Date.now();
+      if(p.meta) p.stage = "ready";
+      touch(p); if(editing) renderEditor();
+      toast(p.meta ? "Marked scheduled in Business Suite" : "Unmarked");
+      break;
     case "pz-stats": if(!p) return; {
       busy(b, true, "Updating…");
       pzStats(p).then(n=>{ renderEditor(); render(); toast(n ? "Stats updated" : "No new numbers from Postiz yet"); })
@@ -1624,8 +1665,9 @@ document.addEventListener("change", e=>{
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && editing){ closeEditor(); render(); } });
 
 load();
+if(metaAutoPost()) render();
 pzAutoCheck();
-document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") pzAutoCheck(); });
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible"){ if(metaAutoPost()) render(); pzAutoCheck(); } });
 
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>

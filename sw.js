@@ -1,7 +1,7 @@
 /* Bump VERSION on every deploy — it wipes the old cache and forces a refresh.
    Strategy is network-first on purpose: you always get the newest file when
    online, and the cache only steps in when there's no connection. */
-const VERSION = "studio-2026-11-04g";
+const VERSION = "studio-2026-11-04h";
 
 const SHELL = [
   "./",
