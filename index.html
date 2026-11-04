@@ -303,8 +303,8 @@ function defaults(){
   return {
     v:1, rev:0,
     brand:{ name:"", ig:"", fb:"", perDay:1, time:"19:00", igTags:5, fbTags:3 },
-    pillars:["Affirmations","Manifestation methods","Mindset & beliefs","Money & abundance",
-             "Love & self-love","Gratitude","Signs & angel numbers","Quotes & reminders"],
+    pillars:["Signs, timing & trust","Mindset & self-concept","Techniques & rituals",
+             "Money & gratitude","Affirmations & energy","Self-love & relationships"],
     hooks:[
       "Stop scrolling if you're ready to manifest ___",
       "This is your sign to ___",
@@ -348,6 +348,25 @@ function blankPost(format){
   };
 }
 
+/* The first version shipped with a different starter pillar list. If a save
+   still has that exact list (never edited), switch it to the current one and
+   move posts and ideas onto the closest new pillar. Edited lists are left alone. */
+const OLD_PILLARS = ["Affirmations","Manifestation methods","Mindset & beliefs","Money & abundance",
+  "Love & self-love","Gratitude","Signs & angel numbers","Quotes & reminders"];
+const PILLAR_MAP = {
+  "Affirmations":"Affirmations & energy", "Manifestation methods":"Techniques & rituals",
+  "Mindset & beliefs":"Mindset & self-concept", "Money & abundance":"Money & gratitude",
+  "Love & self-love":"Self-love & relationships", "Gratitude":"Money & gratitude",
+  "Signs & angel numbers":"Signs, timing & trust", "Quotes & reminders":""
+};
+function migratePillars(d){
+  if(JSON.stringify(d.pillars) !== JSON.stringify(OLD_PILLARS)) return;
+  d.pillars = defaults().pillars;
+  [...(d.posts||[]), ...(d.ideas||[])].forEach(x=>{
+    if(x && x.pillar in PILLAR_MAP) x.pillar = PILLAR_MAP[x.pillar];
+  });
+}
+
 /* Fill in anything missing so older or imported saves never crash the UI. */
 function normalize(d){
   const D = defaults();
@@ -357,6 +376,7 @@ function normalize(d){
   out.postiz = Object.assign({}, D.postiz, d.postiz||{});
   if(!Array.isArray(out.postiz.channels)) out.postiz.channels = [];
   ["pillars","hooks","ctas","tagSets","ideas","posts"].forEach(k=>{ if(!Array.isArray(out[k])) out[k] = D[k]; });
+  migratePillars(out);
   out.posts = out.posts.map(p=>{
     const b = blankPost(p.format);
     const q = Object.assign(b, p);
