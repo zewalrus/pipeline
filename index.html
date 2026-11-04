@@ -2,1239 +2,1123 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Capture · Batch · Ready · Ship</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Theme Page Studio</title>
 <link rel="manifest" href="manifest.webmanifest">
 <script src="firebase-config.js"></script>
-<meta name="theme-color" content="#17191A">
+<meta name="theme-color" content="#F6F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15121B" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pipeline">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Studio">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png" type="image/png">
-<meta name="theme-color" content="#E7E9E6">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Pipeline">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --paper:#E7E9E6; --card:#F5F6F4; --line:#CFD4CF; --ink:#17191A; --muted:#6B7370;
-  --log:#7E8E96; --mid:#B8802B; --ready:#5C7F63; --grade:#A8324E;
-  --r:4px;
+  --bg:#F6F2EC; --card:#FFFDF9; --sunk:#EFE9E0; --line:#E2D9CC; --ink:#221B2E; --muted:#776E80;
+  --accent:#6E4FB0; --accent-soft:#ECE5F7;
+  --reel:#6E4FB0; --carousel:#B07A22; --image:#2A8279;
+  --ig:#C7386F; --fb:#2F64CF; --good:#3B8456; --bad:#BC4134;
+  --r:12px; --nav:64px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#15121B; --card:#1F1A27; --sunk:#191520; --line:#332C3E; --ink:#F1ECF6; --muted:#A69EB1;
+    --accent:#A88BE6; --accent-soft:#2C2440;
+    --reel:#A88BE6; --carousel:#E2AE55; --image:#4DB6AA;
+    --ig:#EE6C9C; --fb:#6E98F0; --good:#62B47F; --bad:#E77266;
+  }
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
-body{
-  background:var(--paper); color:var(--ink);
-  font-family:"Public Sans",system-ui,sans-serif; font-size:16px; line-height:1.45;
-  padding-bottom:80px;
-}
-.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
-.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 "Manrope",system-ui,sans-serif;
+  padding-bottom:calc(var(--nav) + 24px + env(safe-area-inset-bottom))}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+h1,h2{font-family:"Fraunces",Georgia,serif;font-weight:700;letter-spacing:-.01em}
+h1{font-size:28px;line-height:1.1}
+h2{font-size:22px;margin:4px 0 2px}
+h3{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.small{font-size:13px;color:var(--muted)}
+.sub{color:var(--muted);font-size:14px;margin-bottom:16px}
 
-/* ---------- masthead ---------- */
-header{padding:28px 0 18px;border-bottom:1px solid var(--line)}
-.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:clamp(30px,8vw,52px);line-height:.95;letter-spacing:-.02em;margin:8px 0 6px}
-h1 .a{color:var(--log)} h1 .b{color:var(--mid)} h1 .c{color:var(--grade)}
-.sub{color:var(--muted);font-size:14px;max-width:52ch}
+header.top{padding:calc(18px + env(safe-area-inset-top)) 16px 12px}
+header.top .eyebrow{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
 
-/* ---------- track nav ---------- */
-nav{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);padding:8px 0}
-.track{display:flex;gap:6px}
-.clip{flex:1;border:1px solid var(--line);border-radius:var(--r);background:var(--card);
-  padding:8px 10px;text-align:left;cursor:pointer;font:500 11px/1.2 "IBM Plex Mono",monospace;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-left-width:4px}
-.clip[data-p="capture"]{border-left-color:var(--log)}
-.clip[data-p="batch"]{border-left-color:var(--mid)}
-.clip[data-p="ready"]{border-left-color:var(--ready)}
-.clip[data-p="ship"]{border-left-color:var(--grade)}
-@media(max-width:520px){ .clip{padding:7px 6px;border-left-width:3px} }
-.clip b{display:block;font-family:"Public Sans",sans-serif;font-size:clamp(12px,3.4vw,15px);letter-spacing:0;text-transform:none;color:var(--ink);font-weight:600}
-.clip.on{background:var(--ink);color:#9AA3A0}
-.clip.on b{color:#fff}
+/* bottom nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .in{max-width:760px;margin:0 auto;display:flex}
+nav.tabs button{flex:1;height:var(--nav);background:none;border:0;color:var(--muted);font:600 11px/1.1 "Manrope",sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+nav.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button.on{color:var(--accent)}
 
-/* ---------- sections ---------- */
-section{display:none;padding:22px 0 10px}
-section.on{display:block}
-.phase-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
-.phase-head h2{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:26px;letter-spacing:-.01em}
-.phase-head .n{font:500 11px/1 "IBM Plex Mono",monospace;color:var(--muted);letter-spacing:.1em}
-.phase-sub{color:var(--muted);font-size:14px;margin-bottom:18px;max-width:60ch}
+section.view{display:none}
+section.view.on{display:block}
 
-.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:14px}
-.panel > h3{font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+label.f{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 5px}
+label.f:first-child{margin-top:0}
+input[type=text],input[type=number],input[type=date],input[type=time],input[type=email],input[type=password],input[type=url],textarea,select{
+  width:100%;font:15px "Manrope",sans-serif;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:10px;padding:10px 11px;min-height:42px}
+textarea{resize:vertical;min-height:70px;line-height:1.45}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two > div > label.f{margin-top:12px}
 
-label.f{display:block;font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
-input[type=text],textarea,select{
-  width:100%;font-family:"Public Sans",sans-serif;font-size:15px;color:var(--ink);
-  background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;
-}
-textarea{resize:vertical;min-height:56px;line-height:1.4}
-input:focus,textarea:focus,select:focus{outline:2px solid var(--ink);outline-offset:1px}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-button{font-family:"Public Sans",sans-serif;font-size:14px;font-weight:600;cursor:pointer;
-  border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:var(--r);padding:9px 14px}
-button.ghost{background:transparent;color:var(--ink)}
-button.tiny{font-size:12px;padding:5px 9px;font-weight:500}
-button:hover{opacity:.86}
-button:focus-visible{outline:2px solid var(--grade);outline-offset:2px}
+button{font:600 14px "Manrope",sans-serif;cursor:pointer;border:1px solid var(--accent);background:var(--accent);
+  color:#fff;border-radius:10px;padding:10px 14px;min-height:40px}
+@media (prefers-color-scheme: dark){ button{color:#15121B} }
+button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+button.tiny{font-size:13px;padding:6px 10px;min-height:32px;font-weight:600}
+button.danger{color:var(--bad)}
+button.done{background:var(--good);border-color:var(--good)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.grow{flex:1}
 
-/* ---------- idea cards ---------- */
-.cards{display:grid;gap:10px}
-@media(min-width:760px){ .cards{grid-template-columns:1fr 1fr} }
-.idea{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--log);border-radius:var(--r);padding:12px}
-.idea[data-stage=batch]{border-left-color:var(--mid)}
-.idea[data-stage=ready]{border-left-color:var(--ready)}
-.idea[data-stage=ship]{border-left-color:var(--grade)}
-.idea[data-stage=posted]{border-left-color:var(--ink);opacity:.6}
-.hook{font-family:"Bricolage Grotesque",sans-serif;font-weight:600;font-size:17px;line-height:1.2;margin-bottom:6px}
-.meta{font:400 11px/1.3 "IBM Plex Mono",monospace;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px}
-.note{font-size:14px;color:var(--muted);margin-bottom:8px}
-textarea.hook-edit{font-family:"Bricolage Grotesque",sans-serif;font-weight:600;font-size:17px;
-  line-height:1.25;margin-bottom:6px;padding:6px 8px;min-height:2.6em;resize:vertical;
-  border-color:transparent;background:transparent}
-textarea.hook-edit:hover{border-color:var(--line)}
-textarea.hook-edit:focus{background:#fff;border-color:var(--ink)}
-input.note-edit{font-size:14px;color:var(--muted);padding:6px 8px;margin-bottom:2px;
-  border-color:transparent;background:transparent}
-input.note-edit:hover{border-color:var(--line)}
-input.note-edit:focus{background:#fff;border-color:var(--ink);color:var(--ink)}
-.selects{display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:8px}
-@media(min-width:520px){ .selects{grid-template-columns:1fr 1fr} }
-select{font-size:13px;padding:6px 8px}
+/* segmented control */
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;background:transparent;border:0;color:var(--muted);min-height:34px;padding:6px 8px;font-size:13px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 
-/* ---------- beat strip (signature) ---------- */
-.strip{display:flex;gap:2px;margin:8px 0}
-.seg{flex:1;height:7px;background:#DDE0DC;border-radius:1px}
-.seg.done{background:var(--mid)}
-.idea[data-stage=ready] .seg.done{background:var(--ready)}
-.idea[data-stage=ship] .seg.done,.idea[data-stage=posted] .seg.done{background:var(--grade)}
-.beats{display:none;margin-top:8px;padding-top:10px;border-top:1px dashed var(--line)}
-.beats.open{display:block}
-.beat{background:#fff;border:1px solid var(--line);border-left:3px solid var(--mid);border-radius:var(--r);padding:9px;margin-bottom:8px}
-.beat-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.beat .tc{font:500 10px/1 "IBM Plex Mono",monospace;color:var(--muted);letter-spacing:.12em;flex:none}
-.beat .nm{font-weight:600;font-size:12px;color:var(--mid)}
-.beat .hint{font-size:12px;color:var(--muted);margin-bottom:4px}
-.beat-tools{margin-left:auto;display:flex;gap:3px;flex:none}
-.beat-tools button{border:1px solid var(--line);background:transparent;color:var(--muted);
-  font:500 12px/1.2 "IBM Plex Mono",monospace;padding:4px 8px;min-width:28px}
-.beat-tools button:disabled{opacity:.3;cursor:default}
-.beat input[data-act="beattrig"]{font-size:15px;font-weight:600}
-.beat .anchor{margin-top:6px;display:flex;align-items:center;gap:6px}
-.beat .anchor label{font:500 9px/1.2 "IBM Plex Mono",monospace;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--grade);flex:none;width:52px}
-.beat .anchor input{font-family:"IBM Plex Mono",monospace;font-size:13px;padding:6px 8px}
-.beat-shots{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
-.beat-shots input[type=text]{font-size:13px;padding:6px 8px}
-.unassigned-shots{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
-.unassigned-shots input[type=text]{font-size:13px;padding:6px 8px}
-.guide{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 10px}
-.g{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--muted);border:1px dashed var(--line);border-radius:var(--r);padding:5px 7px}
-.g b{color:var(--ink);font-weight:600}
+/* chips */
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;font:600 13px "Manrope",sans-serif;border:1px solid var(--line);background:var(--card);color:var(--muted);
+  border-radius:999px;padding:6px 12px;min-height:32px}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.pick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pick button{background:var(--sunk);border:1px dashed var(--line);color:var(--ink);font-weight:500;font-size:13px;
+  text-align:left;border-radius:8px;padding:6px 9px;min-height:30px}
 
-/* ---------- checklists ---------- */
-.check{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:14px;cursor:pointer}
-.check input{margin-top:3px;width:16px;height:16px;accent-color:var(--grade);flex:none}
-.check.done span{text-decoration:line-through;color:var(--muted)}
-.shot-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.shot-row:last-of-type{border-bottom:none}
-.shot-row .check{flex:1 1 200px;padding:0;min-width:0}
-.shot-row select{flex:none;font-size:12px;padding:4px 6px;max-width:170px}
-.empty{border:1px dashed var(--line);border-radius:var(--r);padding:22px 14px;text-align:center;color:var(--muted);font-size:14px}
-.count{font:400 11px/1 "IBM Plex Mono",monospace;color:var(--muted)}
-.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:50;
-  background:var(--ink);color:var(--paper);border-radius:var(--r);padding:10px 12px;
-  display:none;align-items:center;gap:12px;box-shadow:0 4px 18px rgba(0,0,0,.22);max-width:92vw}
-.toast.show{display:flex}
-.toast span{font-size:14px}
-.toast button{background:transparent;border:1px solid rgba(255,255,255,.4);color:var(--paper);
-  font:600 13px/1 "Public Sans",sans-serif;padding:7px 11px}
-.search{margin:0 0 16px}
-.search input{font-size:15px}
-.hits{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--grade);
-  text-transform:uppercase;margin-top:6px;display:block}
-.spark-q{font-family:"Bricolage Grotesque",sans-serif;font-weight:600;font-size:19px;
-  line-height:1.3;margin:4px 0 12px;min-height:2.4em;display:flex;align-items:center}
-.spark-q.idle{font-family:"Public Sans",sans-serif;font-weight:400;font-size:14px;color:var(--muted)}
-.gate{font:400 12px/1.35 "Public Sans",sans-serif;color:var(--muted);margin-top:7px}
-.gate b{color:var(--ink);font-weight:600}
-footer{border-top:1px solid var(--line);margin-top:28px;padding:14px 0;font-size:12px;color:var(--muted)}
-@media (prefers-reduced-motion:no-preference){ .idea{transition:border-color .2s} }
+/* format tags + platform badges */
+.ft{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  padding:2px 7px;border-radius:6px;color:#fff;background:var(--reel);vertical-align:1px}
+@media (prefers-color-scheme: dark){ .ft{color:#15121B} }
+.ft.carousel{background:var(--carousel)} .ft.image{background:var(--image)}
+.pb{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 6px;border-radius:6px;
+  border:1px solid currentColor;opacity:.75}
+.pb.ig{color:var(--ig)} .pb.fb{color:var(--fb)}
+.pb.posted{opacity:1;background:currentColor}
+.pb.posted span{color:var(--card)}
+
+/* post cards */
+.list{display:grid;gap:8px}
+.pc{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--reel);
+  border-radius:var(--r);padding:11px 12px;color:var(--ink);font-weight:400;min-height:0}
+.pc[data-fmt=carousel]{border-left-color:var(--carousel)} .pc[data-fmt=image]{border-left-color:var(--image)}
+.pc .t{font-weight:700;font-size:15px;margin:5px 0 4px;line-height:1.3;display:block}
+.pc .m{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.stage{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.stage.ready{color:var(--good)} .stage.posted{color:var(--accent)}
+
+.qc{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--reel);border-radius:var(--r);padding:11px 12px}
+.qc[data-fmt=carousel]{border-left-color:var(--carousel)} .qc[data-fmt=image]{border-left-color:var(--image)}
+.qc .open{background:none;border:0;color:var(--ink);padding:0;text-align:left;width:100%;font-weight:400;min-height:0}
+.qc .t{font-weight:700;display:block;margin:5px 0 2px}
+
+/* week strip */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wd{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 2px;text-align:center;cursor:pointer;color:var(--ink);min-height:0;font-weight:400}
+.wd.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wd .d{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.wd .n{font-family:"Fraunces",serif;font-size:18px;font-weight:700;margin:1px 0 5px}
+.dots{display:flex;justify-content:center;gap:4px}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line)}
+.dot.ig.on{background:var(--ig);border-color:var(--ig)} .dot.fb.on{background:var(--fb);border-color:var(--fb)}
+.legend{display:flex;gap:12px;margin-top:8px;font-size:12px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;color:var(--ink);font-weight:400;min-height:0}
+.stat b{display:block;font-family:"Fraunces",serif;font-size:22px;line-height:1.1}
+.stat span{font-size:11px;color:var(--muted);font-weight:600}
+
+.bar{display:grid;grid-template-columns:110px 1fr 54px;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.bar .track{height:10px;background:var(--sunk);border-radius:5px;overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:5px}
+.bar .v{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:20px 14px;text-align:center;color:var(--muted);font-size:14px}
+.gap{display:inline-block;font-size:11px;font-weight:700;color:var(--bad);border:1px dashed var(--bad);border-radius:6px;padding:2px 6px;margin-right:4px}
+
+/* plan */
+.day{margin-bottom:14px}
+.dh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.dh b{font-family:"Fraunces",serif;font-size:17px}
+.dh .small{flex:1}
+.day.today .dh b{color:var(--accent)}
+
+/* idea list */
+.idea{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:11px 12px}
+.idea p{font-weight:600;margin-bottom:6px}
+.spark{font-family:"Fraunces",serif;font-size:19px;line-height:1.3;margin:2px 0 4px;min-height:2.6em}
+
+/* editor sheet */
+#sheet{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;display:none;
+  padding-bottom:calc(30px + env(safe-area-inset-bottom))}
+#sheet.on{display:block}
+body.locked{overflow:hidden}
+.sh-top{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);
+  padding:calc(8px + env(safe-area-inset-top)) 0 8px}
+.sh-top .in{max-width:760px;margin:0 auto;padding:0 16px;display:flex;gap:8px;align-items:center}
+.sh-top .ttl{flex:1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-body{padding-top:12px}
+.item{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.item-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.item-top .lbl{font-size:12px;font-weight:700;color:var(--accent);flex:1}
+.item-top button{background:transparent;border:1px solid var(--line);color:var(--muted);min-height:30px;min-width:32px;padding:3px 8px;font-size:13px}
+.item input{margin-bottom:6px}
+.item textarea{min-height:52px}
+.count{font-size:12px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.count.warn{color:var(--bad);font-weight:600}
+.tagprev{font-size:13px;color:var(--accent);margin-top:6px;word-break:break-word}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.statgrid label.f{margin:0 0 4px}
+details.more{margin-top:12px}
+details.more summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--accent);padding:4px 0}
+.plat-h{font-weight:700;margin:12px 0 6px;display:flex;align-items:center;gap:6px}
+.plat-h:first-child{margin-top:0}
+
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;
+  background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600;
+  display:none;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.toast.on{display:block}
+.copybox{width:100%;min-height:140px;margin-top:8px;font-size:13px}
+#sync-why{white-space:pre-wrap;font-size:13px;background:var(--sunk);padding:10px;border-radius:8px;margin-top:8px}
 </style>
-<script>
-/* Service worker: offline shell + standalone window.
-   Network-first, so a new deploy shows up on the next open rather than
-   sitting behind a stale cache. */
-if("serviceWorker" in navigator){
-  const hadController = !!navigator.serviceWorker.controller;
-  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
-  let reloading = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if(!hadController || reloading) return;   // first install shouldn't reload
-    reloading = true; location.reload();
-  });
-}
-</script>
 </head>
 <body>
-<div class="wrap">
 
-<header>
-  <div class="eyebrow">Content pipeline · everything nests under three verbs</div>
-  <h1><span class="a">Capture</span> <span class="b">Batch</span> <span class="c">Ship</span></h1>
-  <p class="sub">Flat and unprocessed on the left, fully graded on the right. An idea moves one direction only.</p>
+<header class="top wrap">
+  <div class="eyebrow" id="hdr-date"></div>
+  <h1 id="hdr-name">Theme Page Studio</h1>
 </header>
 
-<nav>
-  <div class="track">
-    <button class="clip on" data-p="capture">01 <b>Capture</b><span class="count" id="c-capture"></span></button>
-    <button class="clip" data-p="batch">02 <b>Batch</b><span class="count" id="c-batch"></span></button>
-    <button class="clip" data-p="ready">03 <b>Ready</b><span class="count" id="c-ready"></span></button>
-    <button class="clip" data-p="ship">04 <b>Ship</b><span class="count" id="c-ship"></span></button>
+<main class="wrap">
+  <section class="view" id="v-today"></section>
+  <section class="view" id="v-ideas"></section>
+  <section class="view" id="v-posts"></section>
+  <section class="view" id="v-plan"></section>
+  <section class="view" id="v-kit">
+    <div id="kit-dyn"></div>
+
+    <!-- Static on purpose: the sync script below wires these up once. -->
+    <div class="panel" id="sync-panel">
+      <h3>Sync across devices</h3>
+      <p class="small" id="sync-state">Checking…</p>
+      <div id="sync-setup" style="display:none">
+        <p class="small" style="margin-top:8px">Sync isn't set up. What's wrong:</p>
+        <div id="sync-why"></div>
+      </div>
+      <div id="sync-signin" style="display:none">
+        <label class="f">Email</label><input type="email" id="sync-email" autocomplete="username">
+        <label class="f">Password</label><input type="password" id="sync-pass" autocomplete="current-password">
+        <div class="row"><button id="sync-in">Sign in</button><button class="ghost" id="sync-new">Create account</button></div>
+      </div>
+      <div id="sync-on" style="display:none">
+        <div class="row"><button class="ghost tiny" id="sync-push">Sync now</button><button class="ghost tiny" id="sync-out">Sign out</button></div>
+      </div>
+      <div id="sync-clash" style="display:none">
+        <p class="small" id="sync-clash-txt" style="margin-top:8px"></p>
+        <div class="row"><button id="clash-local">Keep this device</button><button class="ghost" id="clash-remote">Keep synced copy</button></div>
+      </div>
+      <p class="small" id="sync-msg" style="margin-top:6px"></p>
+    </div>
+  </section>
+</main>
+
+<div id="sheet" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast"></div>
+
+<nav class="tabs">
+  <div class="in">
+    <button data-a="tab" data-v="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Today</button>
+    <button data-a="tab" data-v="ideas"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg>Ideas</button>
+    <button data-a="tab" data-v="posts"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Posts</button>
+    <button data-a="tab" data-v="plan"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plan</button>
+    <button data-a="tab" data-v="kit"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Kit</button>
   </div>
-  <div class="count" id="save-state" style="padding:5px 2px 1px">checking storage…</div>
 </nav>
 
-<div class="search">
-  <input type="text" id="q" placeholder="Search every card — topic, beats, shots, captions">
-  <span class="hits" id="hits"></span>
-</div>
-
-<!-- ============ CAPTURE ============ -->
-<section id="s-capture" class="on">
-  <div class="phase-head"><span class="n">01</span><h2>Capture</h2></div>
-  <p class="phase-sub">Whenever something occurs to you. Just the topic — the hook and the beats come later, in Batch.</p>
-
-  <div class="panel">
-    <h3>New idea</h3>
-    <label class="f" for="i-topic">Topic — what the video is about</label>
-    <textarea id="i-topic" placeholder="A few words is plenty. &quot;the parent who yelled at me&quot;, &quot;my first setup&quot;."></textarea>
-    <div class="sub">
-      <label class="f" for="i-pillar">Pillar</label>
-      <select id="i-pillar"></select>
-    </div>
-    <div style="margin-top:10px">
-      <label class="f" for="i-note">Note to self (optional)</label>
-      <input type="text" id="i-note" placeholder="the detail you don't want to forget">
-    </div>
-    <div class="row"><button id="add">Add idea</button></div>
-  </div>
-
-  <div class="panel">
-    <h3>Stuck? Draw a prompt</h3>
-    <select id="spark-pillar"></select>
-    <div class="count" id="spark-mode" style="margin-top:8px"></div>
-    <div class="spark-q idle" id="spark-q">Pick a pillar and draw — one question at a time, no repeats until the pool runs out.</div>
-    <div class="row">
-      <button class="tiny" id="spark-draw">Draw a prompt</button>
-      <button class="ghost tiny" id="spark-use" disabled style="opacity:.35">Use this ↑</button>
-    </div>
-  </div>
-
-  <div class="cards" id="list-capture"></div>
-</section>
-
-<!-- ============ BATCH ============ -->
-<section id="s-batch">
-  <div class="phase-head"><span class="n">02</span><h2>Batch</h2></div>
-  <p class="phase-sub">Once a week, before you touch the camera. Sort by pillar, build the beat sheet, list your shots.</p>
-
-  <div class="panel">
-    <h3>Filter by pillar</h3>
-    <select id="filter"></select>
-  </div>
-
-  <div class="cards" id="list-batch"></div>
-</section>
-
-<!-- ============ READY ============ -->
-<section id="s-ready">
-  <div class="phase-head"><span class="n">03</span><h2>Ready</h2></div>
-  <p class="phase-sub">Beats written, shots listed. Nothing here needs thinking about — set the camera up and work down the list.</p>
-
-  <div class="panel">
-    <h3>Everything to film</h3>
-    <div id="ready-plan" style="font-size:14px"></div>
-  </div>
-
-  <div class="cards" id="list-ready"></div>
-</section>
-
-<!-- ============ SHIP ============ -->
-<section id="s-ship">
-  <div class="phase-head"><span class="n">04</span><h2>Ship</h2></div>
-  <p class="phase-sub">Grade it, post it, then look back once a week at what actually held attention.</p>
-
-  <div class="panel">
-    <h3>Grading workflow — edit to match your exact settings</h3>
-    <textarea id="grading" style="min-height:190px" class="mono" spellcheck="false"></textarea>
-    <div class="row"><button class="ghost tiny" id="save-grade">Save workflow</button><span class="count" id="grade-saved"></span></div>
-  </div>
-
-  <div class="cards" id="list-ship"></div>
-
-  <div class="panel" style="margin-top:14px">
-    <h3>Weekly look-back</h3>
-    <textarea id="review" placeholder="Which video held attention longest? Which anchor topic got shares? What do I capture more of next week?"></textarea>
-    <div class="row"><button class="ghost tiny" id="save-review">Save notes</button></div>
-  </div>
-
-  <div class="panel">
-    <h3>Export</h3>
-    <p style="font-size:14px;color:var(--muted);margin-bottom:10px">Copies everything as plain text for your notes app.</p>
-    <div class="row"><button class="ghost" id="export">Copy as text</button><span class="count" id="export-msg"></span></div>
-  </div>
-
-  <div class="panel" id="sync-panel">
-    <h3>Sync across devices</h3>
-    <div class="count" id="sync-state" style="margin-bottom:10px">checking…</div>
-
-    <div id="sync-setup" style="display:none">
-      <p style="font-size:14px;color:var(--grade)" id="sync-why"></p>
-    </div>
-
-    <div id="sync-signin" style="display:none">
-      <label class="f" for="sync-email">Email</label>
-      <input type="email" id="sync-email" autocomplete="username" placeholder="the address you'll use on both devices">
-      <div style="margin-top:8px"><label class="f" for="sync-pass">Password</label>
-      <input type="password" id="sync-pass" autocomplete="current-password" placeholder="at least 6 characters"></div>
-      <div class="row"><button class="tiny" id="sync-in">Sign in</button>
-        <button class="ghost tiny" id="sync-new">Create account</button>
-        <span class="count" id="sync-msg"></span></div>
-    </div>
-
-    <div id="sync-on" style="display:none">
-      <div class="row"><button class="ghost tiny" id="sync-out">Sign out</button>
-        <button class="ghost tiny" id="sync-push">Push this device now</button></div>
-    </div>
-
-    <div id="sync-clash" style="display:none;border:1px solid var(--grade);border-radius:var(--r);padding:11px;margin-top:10px">
-      <div style="font-weight:600;margin-bottom:5px">Two different copies</div>
-      <p style="font-size:14px;color:var(--muted);margin-bottom:9px" id="sync-clash-txt"></p>
-      <div class="row"><button class="tiny" id="clash-local">Keep this device</button>
-        <button class="tiny" id="clash-remote">Use the synced copy</button></div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h3>Backup &amp; restore</h3>
-    <p style="font-size:14px;color:var(--muted);margin-bottom:10px">Copy this whole box somewhere safe. To restore, paste it back in and press Restore.</p>
-    <textarea id="backup" class="mono" style="min-height:110px;font-size:11px" spellcheck="false"></textarea>
-    <div class="row"><button class="ghost tiny" id="mk-backup">Fill with my data</button>
-      <button class="tiny" id="restore">Restore from box</button><span class="count" id="backup-msg"></span></div>
-  </div>
-</section>
-
-<footer>Ideas move Capture → Batch → Ready → Ship → Posted.</footer>
-</div>
-
-<div class="toast" id="toast"><span id="toast-msg"></span><button id="undo">Undo</button></div>
-
 <script>
-const PILLARS = ["Channeled Message","Motivation","Tutorial","Myth Busting","Ranking","List"];
+/* ============================================================
+   DATA
+   ============================================================ */
+const KEY = "studio:v1";
+const PLATS = [["ig","Instagram","IG"],["fb","Facebook","FB"]];
+const FORMATS = [["reel","Reel"],["carousel","Carousel"],["image","Image"]];
+const METRICS = [["views","Views"],["likes","Likes"],["comments","Comments"],["shares","Shares"],["saves","Saves"],["follows","Follows"]];
+const IG_CAPTION_MAX = 2200, CAROUSEL_MAX = 20;
 
-/* Lives on the shot, not the idea — a talking-head video just has no shots
-   to categorize, so there's no "talking head" option here. */
-const FOOTAGE = [
-  ["","Type — not set"],
-  ["evidence","Evidence shot (receipt, chewed cords, screenshot)"],
-  ["anchor","Anchor footage (GRWM, driving, errands — voiceover on top)"]
+const SPARKS = [
+  "5 money affirmations to repeat before bed",
+  "Signs your manifestation is closer than you think",
+  "The 3-6-9 method explained in 30 seconds",
+  "Scripting: write your future like it already happened",
+  "What to do when your manifestation isn't showing up",
+  "Angel number 111: what it means when you keep seeing it",
+  "A 2-minute gratitude list that shifts your energy",
+  "Stop saying these 5 phrases if you want abundance",
+  "Your sign to stop chasing and start attracting",
+  "Self-love affirmations for when you feel stuck",
+  "Limiting belief → new belief (before/after carousel)",
+  "How to raise your vibration in 60 seconds",
+  "'Act as if' — tiny daily examples",
+  "Quote card: what you seek is seeking you",
+  "The 17-second rule for focused intention",
+  "Night routine for manifesting while you sleep",
+  "POV: you finally stopped doubting the universe",
+  "3 things to let go of to make room for what's coming",
+  "Comment 'MINE' to claim this affirmation",
+  "This or that: which affirmation do you need today?",
+  "Gratitude prompts for the new month",
+  "How to tell intuition from fear",
+  "Pick a card: your message from the universe today",
+  "Things that are coming to you this week (list reel)",
+  "Morning affirmations over a calm sunrise clip"
 ];
 
-/* Suggested shape only — beats are free-form. "Use this format" seeds these five. */
-/* All six pillars pull from the same spiritual well; MODES just tunes the
-   shape of the ask: direct address, teaching a step-by-step, correcting a
-   myth, or handing back a countable list or ranking. */
-const MODES = {
-  "Channeled Message":"Speak straight to the one person who needs this today — not about you, not general advice.",
-  "Motivation":"For someone whose faith in their own timing is running low — what would you want them to trust?",
-  "Tutorial":"Walk through exactly how you do it, step by step, like you're teaching a beginner in the room.",
-  "Myth Busting":"Name the myth first, then say plainly what's actually true.",
-  "Ranking":"Put things in order and say why — the order is the hook.",
-  "List":"A clean, countable set — signs, tools, mistakes — said fast, no filler."
-};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
-const SPARKS = {
-"Channeled Message":[
- "What does someone need to hear right now who feels like they're falling behind everyone else?",
- "What message keeps showing up for the people who reach out to you this week?",
- "What would you say to someone who's about to give up on something they've been quietly hoping for?",
- "What does spirit want a grieving person to know that words usually fail to say?",
- "What would you tell someone who keeps asking why is this happening to me?",
- "What message is for the person who feels invisible right now?",
- "What do the guides want someone to stop apologizing for?",
- "What would you say to someone who's scared they missed their moment?",
- "What does someone need permission to walk away from?",
- "What message is for the person who hasn't been prayed for by anyone but themselves?",
- "What would you tell someone who feels like they're being punished for something they can't name?",
- "What does someone need to hear before they make the decision they're avoiding?",
- "What would you say to the version of someone who hasn't healed yet?",
- "What message is for someone who thinks their prayers aren't being answered?",
- "What do you want someone to know about the person they lost?",
- "What would you tell someone who feels like they're too much for everyone around them?",
- "What does someone need to hear about the thing they keep blaming themselves for?",
- "What message is for someone who's about to settle for less than what they asked for?",
- "What would you say to someone who's afraid their breakthrough isn't coming?",
- "What does the universe want someone to stop waiting for permission to do?",
- "What would you tell someone who feels forgotten by everyone, including themselves?",
- "What message is for the person who's been strong for too long?",
- "What does someone need to hear about the door that just closed on them?",
- "What would you say to someone who's convinced they're behind on their own life?"
-],
-"Motivation":[
- "What would you tell someone who feels like their manifestation is taking too long?",
- "What's the fear keeping someone stuck that you could talk them through?",
- "What would you say to someone who thinks they've lost their intuition?",
- "What's the difference between patience and giving up, and how do you know which one you're doing?",
- "What would you tell someone who feels like the universe stopped listening to them?",
- "What's a moment you almost quit trusting your path, and what kept you going?",
- "What would you say to someone comparing their timeline to everyone else's?",
- "What's the thing someone needs to release before anything new can come in?",
- "What would you tell someone who feels punished every time they try to grow?",
- "What's a sign someone is exactly where they're supposed to be, even if it doesn't feel like it?",
- "What would you say to someone who's scared to want something out loud?",
- "What's the belief that's quietly running someone's whole life without them noticing?",
- "What would you tell someone who feels like they keep attracting the same lesson?",
- "What's the difference between a closed door and a no, not yet?",
- "What would you say to someone who thinks they're too broken to be helped?",
- "What's a truth about waiting that would actually comfort someone?",
- "What would you tell someone who's afraid their best days already happened?",
- "What's the thing someone keeps praying for while blocking it with their own doubt?",
- "What would you say to someone who feels like their faith is running out?",
- "What's a way someone sabotages their own growth without realizing it?",
- "What would you tell someone who feels like they're falling apart before they level up?",
- "What's the lie about deserving good things that you'd correct for someone?",
- "What would you say to someone who feels stuck between who they were and who they're becoming?",
- "What's a small shift in belief that changes everything else?"
-],
-"Tutorial":[
- "What's a grounding technique you'd teach someone who's never tried one?",
- "How would you walk someone through their first tarot pull, start to finish?",
- "What's your actual process for protecting your energy before a reading?",
- "How do you cleanse a space, and how often should someone actually do it?",
- "What's the simplest way to start reading your own cards without overthinking it?",
- "How do you tell the difference between your own thoughts and an actual message?",
- "What's a technique for calming down before you try to hear anything?",
- "How would you teach someone to set an intention that actually works?",
- "What's your method for interpreting a sign versus dismissing it as nothing?",
- "How do you cut a cord with someone or something that's still affecting you?",
- "What's a beginner-friendly way to start working with a deck for the first time?",
- "How do you ask a question you're afraid of the answer to?",
- "What's your process for closing a reading or session properly?",
- "How would you teach someone to journal their dreams so the patterns show up?",
- "What's a way to check in with your intuition when you genuinely can't tell if it's real?",
- "How do you build a simple daily practice that doesn't take more than five minutes?",
- "What's the right way to cleanse a new tool before you use it?",
- "How would you walk someone through choosing their first deck?",
- "What's your technique for staying neutral when a reading gets emotional?",
- "How do you ground yourself after a heavy session?",
- "What's a step-by-step way to start trusting your gut on small decisions first?",
- "How would you teach someone to recognize their own intuitive language, whether it's images, words, or feelings?",
- "What's the right order of steps before you ever pull a card?",
- "How do you know when to stop pulling cards and just sit with the answer you got?"
-],
-"Myth Busting":[
- "What's a myth about psychics you're tired of correcting?",
- "What do people get wrong about what a reading can and can't tell them?",
- "What's something people assume about tarot that isn't true at all?",
- "What's a myth about manifestation that sets people up to blame themselves?",
- "What do people misunderstand about what a sign actually is?",
- "What's the biggest misconception about how this work actually feels from your side?",
- "What's a myth about grief and the other side that needs correcting?",
- "What do people get wrong about whether a reading can predict an exact date?",
- "What's something people believe about curses or bad energy that isn't accurate?",
- "What's a myth about intuition that makes people doubt themselves more?",
- "What do people misunderstand about what happens when you get a bad or scary reading?",
- "What's the myth about needing a gift to do this work?",
- "What do people assume about tarot cards being able to control outcomes?",
- "What's a misconception about what it means when nothing comes through?",
- "What do people get wrong about mediumship versus what you actually do?",
- "What's a myth about crystals or tools having power on their own?",
- "What do people misunderstand about free will versus fate in a reading?",
- "What's something people believe about psychics knowing everything, that isn't true?",
- "What do people get wrong about why a reading can feel different every time?",
- "What's a myth about someone being too far gone to change their path?",
- "What do people misunderstand about deja vu, synchronicity, or signs repeating?",
- "What's the myth about needing to believe for it to work?",
- "What do people get wrong about what a reversed card actually means?",
- "What's a misconception about spirit guides that would surprise people?"
-],
-"Ranking":[
- "What are the clearest signs from spirit, ranked from subtle to obvious?",
- "Rank the tarot cards people fear most, and say why they shouldn't.",
- "What are the worst times to get a reading, ranked from mildly bad idea to worst idea?",
- "Rank the excuses people give for not trusting their gut.",
- "What are the most common questions people bring you, ranked by how often you hear them?",
- "Rank the myths about psychics from mildly annoying to genuinely wrong.",
- "What are the hardest kinds of readings to give, ranked?",
- "Rank the signs someone's about to have a breakthrough.",
- "What are the most overrated spiritual tools, ranked?",
- "Rank the ways people block their own intuition without realizing it.",
- "What are the scariest sounding cards that are actually good news, ranked?",
- "Rank the questions you wish people would ask instead of when will it happen.",
- "What are the most common reasons a reading doesn't land, ranked?",
- "Rank the signs someone is finally ready to let go of something.",
- "What are the biggest red flags in a psychic or a reading, ranked?",
- "Rank the ways grief shows up as a sign from the other side.",
- "What are the most misunderstood cards in the deck, ranked?",
- "Rank the things people should do before their first reading.",
- "What are the hardest truths you've had to deliver, ranked by how hard they were to say?",
- "Rank the reasons someone's manifestation might be delayed.",
- "What are the clearest signs a decision is the wrong one, ranked?",
- "Rank the questions that reveal someone already knows the answer.",
- "What are the most common blocks to trusting intuition, ranked from easiest to hardest to fix?",
- "Rank the moments in your own journey that changed how you do this work."
-],
-"List":[
- "What are five signs someone's intuition is trying to get their attention?",
- "What are the things you wish every beginner knew before their first reading?",
- "What are the questions people should stop asking a psychic?",
- "What are the small signs from a loved one who's passed that people usually miss?",
- "What are the things that block a manifestation without people realizing it?",
- "What are the tools you actually use versus the ones that just look nice?",
- "What are the signs a reading is legitimate versus a red flag?",
- "What are the ways people talk themselves out of trusting a sign?",
- "What are the things you'd tell someone who just pulled their first tarot card?",
- "What are the questions that always reveal more than people mean to share?",
- "What are the myths you had to unlearn early in this work?",
- "What are the signs someone is finally on the right path?",
- "What are the things that happen in your body right before you know something?",
- "What are the boundaries you've had to set doing this work?",
- "What are the ways someone can start developing their intuition today?",
- "What are the things people get defensive about hearing in a reading?",
- "What are the signs it's time to walk away from a situation?",
- "What are the questions you ask yourself before every session?",
- "What are the things that surprised you most when you started this work?",
- "What are the everyday moments that are actually spiritual signs?",
- "What are the things a reading genuinely cannot tell someone?",
- "What are the habits that keep someone stuck in the same cycle?",
- "What are the signs your energy needs protecting?",
- "What are the things you'd want someone to know before they see you for the first time?"
-]
-};
-
-const glabel = (b,x) => x===0 ? "Hook" : (b.g||"");
-const GUIDE = [
-  ["Hook","the line that stops the scroll"],
-  ["Retain","the reason they don't swipe away — build, tension, or detail"],
-  ["Reward","the payoff — the point, the punchline, or the twist"]
-];
-
-const EDITS = ["Hook is on screen in the first second","Captions burned in","Dead air trimmed at the front",
-  "Your strongest beat has a cut, zoom, or sound on it","Evidence shot lands mid-story, not at the end",
-  "Ends on the last beat — no trailing silence","Watched it once on mute"];
-
-const DEFAULT_GRADING =
-`SHOOT
-  Log mode
-  White balance locked (don't let it drift mid-take)
-  Exposure set to your standard technique
-
-GRADE IN CAPCUT — in this order
-  1. Exposure / brightness
-  2. Contrast
-  3. White balance + tint
-  4. Saturation
-  5. Highlights & shadows
-  6. Sharpen last
-
-(Replace these with your exact numbers — this is a placeholder.)`;
-
-const KEY = "pipeline:v1";
-let S = null, filter = "all", q = "", open = {}, MODE = "checking";
-let trash = null, trashTimer = null;
-let sparkQueue = [], sparkCurrent = "";
-/* Shots reference a beat by this id, not by position, so reordering or
-   deleting beats never silently reassigns a shot to the wrong one. */
-let beatSeq = 0;
-const newBeatId = () => "b"+Date.now()+"-"+(beatSeq++);
-
-function fresh(){
-  return { ideas: [], grading: DEFAULT_GRADING, review:"" };
+function defaults(){
+  return {
+    v:1, rev:0,
+    brand:{ name:"", ig:"", fb:"", perDay:1, time:"19:00", igTags:5, fbTags:3 },
+    pillars:["Affirmations","Manifestation methods","Mindset & beliefs","Money & abundance",
+             "Love & self-love","Gratitude","Signs & angel numbers","Quotes & reminders"],
+    hooks:[
+      "Stop scrolling if you're ready to manifest ___",
+      "This is your sign to ___",
+      "3 signs the universe is about to bless you",
+      "If you're seeing this, it's not a coincidence",
+      "The manifestation method nobody talks about",
+      "Say this before you sleep tonight",
+      "You attracted this video for a reason",
+      "Your ___ is blocked because of this one belief",
+      "Read this when you feel like giving up",
+      "Type YES if you're claiming this"
+    ],
+    ctas:[
+      "Save this for when you need a reminder ✨",
+      "Share this with someone who needs it today 💫",
+      "Comment 'MINE' to claim it 🙏",
+      "Follow for daily manifestation reminders 🌙"
+    ],
+    tagSets:[
+      {id:uid(), name:"Core", tags:"#lawofattraction #manifestation #affirmations #abundance #manifest"},
+      {id:uid(), name:"Money", tags:"#moneymindset #abundancemindset #manifestmoney #wealthmindset #lawofattraction"},
+      {id:uid(), name:"Love", tags:"#selflove #manifestlove #loveaffirmations #lawofattraction #healing"},
+      {id:uid(), name:"Spiritual", tags:"#universe #synchronicity #angelnumbers #highvibes #spiritualawakening"}
+    ],
+    ideas:[], posts:[]
+  };
 }
 
-/* Old saves used a fixed 5-key beats object, a script field, and the old category
-   list. Convert them, and clear out the starter cards that were never worked on. */
-function migrate(d){
-  const OLDK = ["hook","scene","turn","moment","landing"];
-  const NAME = {hook:"Hook",scene:"Scene",turn:"Turn",moment:"Moment",landing:"Landing"};
-  d.ideas = (d.ideas||[]).filter(i=>{
-    if(!String(i.id).startsWith("seed")) return true;
-    const touched = Object.values(i.beats||{}).some(v=>String(v).trim())
-      || (i.script||"").trim() || (i.shots||[]).length || (i.caption||"").trim() || (i.note||"").trim();
-    return !!touched;
+function blankPost(format){
+  return {
+    id:uid(), title:"", format:format||"reel", pillar:"", stage:"draft", date:"", time:"",
+    plats:{ig:true, fb:true},
+    hook:"", audio:"", visual:"",
+    beats:[{id:uid(),g:"Hook",t:"",d:""},{id:uid(),g:"Retain",t:"",d:""},{id:uid(),g:"Reward",t:"",d:""}],
+    slides:[{id:uid(),t:"",d:""},{id:uid(),t:"",d:""}],
+    caption:"", fbCaption:"", cta:"", tagSet:"", extraTags:"",
+    posted:{ig:0, fb:0}, links:{ig:"", fb:""}, stats:{ig:{}, fb:{}},
+    created:Date.now(), updated:Date.now()
+  };
+}
+
+/* Fill in anything missing so older or imported saves never crash the UI. */
+function normalize(d){
+  const D = defaults();
+  d = (d && typeof d === "object") ? d : {};
+  const out = Object.assign({}, D, d);
+  out.brand = Object.assign({}, D.brand, d.brand||{});
+  ["pillars","hooks","ctas","tagSets","ideas","posts"].forEach(k=>{ if(!Array.isArray(out[k])) out[k] = D[k]; });
+  out.posts = out.posts.map(p=>{
+    const b = blankPost(p.format);
+    const q = Object.assign(b, p);
+    q.plats  = Object.assign({ig:true,fb:true}, p.plats||{});
+    q.posted = Object.assign({ig:0,fb:0}, p.posted||{});
+    q.links  = Object.assign({ig:"",fb:""}, p.links||{});
+    q.stats  = {ig:Object.assign({}, (p.stats||{}).ig), fb:Object.assign({}, (p.stats||{}).fb)};
+    if(!Array.isArray(q.beats)) q.beats = b.beats;
+    if(!Array.isArray(q.slides)) q.slides = b.slides;
+    return q;
   });
-  d.ideas.forEach(i=>{
-    if(!Array.isArray(i.beats)){
-      const o = i.beats||{};
-      i.beats = OLDK.filter(k=>String(o[k]||"").trim())
-                    .map(k=>({g:NAME[k], t:String(o[k]).trim(), d:""}));
-    }
-    if((i.script||"").trim() && !i.beats.length)
-      i.beats = [{g:"", t:"(from your old script — trim this to keywords)", d:i.script.trim().slice(0,300)}];
-    delete i.script;
-    if(i.hook && !i.topic){ i.topic = i.hook; delete i.hook; }
-    if(i.cat === "Motivational") i.cat = "Motivation";
-    /* "Unsorted" is a deliberate hidden fallback: it's not in PILLARS, so it
-       never shows up as a choice, but it keeps old cards from silently
-       becoming whichever pillar happens to be first in the new list. */
-    if(!PILLARS.includes(i.cat)) i.cat = "Unsorted";
-    /* Beats predate having an id at all; shots predate being linked to one.
-       Backfill both so old cards can use the beat/shot assignment UI. */
-    i.beats.forEach(b=>{ if(!b.id) b.id = newBeatId(); });
-    (i.shots||[]).forEach(s=>{ if(typeof s.beatId !== "string") s.beatId = ""; });
-  });
-  return d;
+  return out;
 }
-/* storage: try artifact storage, then localStorage, then memory-only */
-async function readStore(){
-  if(window.storage && window.storage.get){
-    try{ const r = await window.storage.get(KEY);
-      if(r && r.value){ MODE="cloud"; return r.value; }
-      MODE="cloud"; return null;
-    }catch(e){ MODE="cloud"; return null; }
-  }
-  try{ const v = localStorage.getItem(KEY); MODE="local"; return v; }
-  catch(e){ MODE="none"; return null; }
-}
-async function writeStore(str){
-  if(window.storage && window.storage.set){
-    try{ const r = await window.storage.set(KEY,str); if(r){ MODE="cloud"; return true; } }catch(e){}
-  }
-  try{ localStorage.setItem(KEY,str); MODE="local"; return true; }catch(e){}
-  MODE="none"; return false;
-}
-async function load(){
-  let raw = null;
-  try{ raw = await readStore(); }catch(e){}
-  if(raw){ try{ S = migrate(JSON.parse(raw)); }catch(e){ S = null; } }
-  if(!S){ S = fresh(); }
-  await writeStore(JSON.stringify(S));
-  render(); status();
-}
-let t;
+
+/* ============================================================
+   STORAGE — this device first, Firebase sync layered on top
+   ============================================================ */
+let S = null, MODE = "local";
+function readStore(){ try{ return localStorage.getItem(KEY); }catch(e){ MODE="none"; return null; } }
+function writeStore(str){ try{ localStorage.setItem(KEY,str); MODE="local"; return true; }catch(e){ MODE="none"; return false; } }
+let saveTimer;
 function save(){
   S.rev = (S.rev||0) + 1;
-  clearTimeout(t); t = setTimeout(async()=>{
-    const ok = await writeStore(JSON.stringify(S)); status(ok);
-    if(BRIDGE.onLocalChange) BRIDGE.onLocalChange();
-  },250);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{ writeStore(JSON.stringify(S)); if(BRIDGE.onLocalChange) BRIDGE.onLocalChange(); }, 250);
+}
+function load(){
+  let raw = readStore();
+  try{ S = normalize(raw ? JSON.parse(raw) : null); }catch(e){ S = normalize(null); }
+  if(!S.tagSets.length) S.tagSets = defaults().tagSets;
+  writeStore(JSON.stringify(S));
+  render();
 }
 
-/* Bridge the sync module (loaded below as type=module) talks to. */
 const BRIDGE = {
-  onLocalChange: null,
-  getState: () => S,
-  getRev: () => S.rev || 0,
+  onLocalChange:null,
+  getState:()=>S,
+  getRev:()=>S.rev||0,
+  hasContent:st=>((st.posts||[]).length + (st.ideas||[]).length) > 0,
   applyRemote(d){
     const a = document.activeElement;
-    if(a && (a.tagName==="TEXTAREA" || a.tagName==="INPUT") && a.id!=="q"){
-      clearTimeout(BRIDGE._defer);
-      BRIDGE._defer = setTimeout(()=>BRIDGE.applyRemote(d), 3000);
-      return;
+    if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){
+      clearTimeout(BRIDGE._defer); BRIDGE._defer = setTimeout(()=>BRIDGE.applyRemote(d), 3000); return;
     }
-    try{ localStorage.setItem(KEY+":prevync", JSON.stringify(S)); }catch(e){}
-    S = migrate(d); S.rev = d.rev || S.rev || 0;
-    writeStore(JSON.stringify(S)); render();
+    try{ localStorage.setItem(KEY+":before-sync", JSON.stringify(S)); }catch(e){}
+    const rev = d.rev||0;
+    S = normalize(d); S.rev = rev;
+    writeStore(JSON.stringify(S));
+    if(editing && !getPost(editing)) closeEditor();
+    render(); if(editing) renderEditor();
   },
   setStatus(txt, tone){
     const e = el("sync-state"); if(!e) return;
-    e.textContent = txt; e.style.color = tone==="bad" ? "var(--grade)"
-      : tone==="good" ? "var(--ready)" : "var(--muted)";
+    e.textContent = txt;
+    e.style.color = tone==="bad" ? "var(--bad)" : tone==="good" ? "var(--good)" : "var(--muted)";
   }
 };
 window.BRIDGE = BRIDGE;
-function status(ok){
-  const e = el("save-state"); if(!e) return;
-  if(MODE==="none"){ e.textContent = "NOT SAVING — use Copy as text to keep your work"; e.style.color="var(--grade)"; }
-  else { const d=new Date();
-    e.textContent = "Saved "+d.getHours()%12+":"+String(d.getMinutes()).padStart(2,"0")+(d.getHours()<12?"am":"pm")+
-      (MODE==="local"?" (this browser)":"");
-    e.style.color="var(--muted)"; }
-}
 
+/* ============================================================
+   HELPERS
+   ============================================================ */
 const el = id => document.getElementById(id);
-const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const beatsOf = i => Array.isArray(i.beats) ? i.beats : [];
-const done = i => beatsOf(i).filter(b=>(b.t||"").trim()).length;
-const topicOf = i => (i.topic || i.hook || "").trim();
-const ftLabel = v => v ? (FOOTAGE.find(f=>f[0]===v)||["",""])[1].split(" (")[0] : "";
-const haystack = i => [topicOf(i), i.note, i.cat, i.caption,
-  ...beatsOf(i).flatMap(b=>[b.t,b.d]), ...(i.shots||[]).map(s=>s.t)
-].filter(Boolean).join(" ").toLowerCase();
-const matches = i => !q || haystack(i).includes(q);
-const isReady = i => done(i)>0 && (i.shots||[]).length>0;
-const gateText = i => {
-  const missing = [];
-  if(!done(i)) missing.push("at least one beat");
-  if(!(i.shots||[]).length) missing.push("at least one shot");
-  return missing.length ? `Needs <b>${missing.join(" and ")}</b> before it can move to Ready.` : "";
-};
-function refreshGate(i, cardEl){
-  if(!cardEl) return;
-  const btn = cardEl.querySelector('[data-act="to-ready"]'); if(!btn) return;
-  const ok = isReady(i);
-  btn.disabled = !ok; btn.style.opacity = ok ? "" : ".35"; btn.style.cursor = ok ? "" : "default";
-  let g = cardEl.querySelector(".gate");
-  if(ok){ if(g) g.remove(); return; }
-  if(!g){ g = document.createElement("div"); g.className = "gate"; btn.closest(".row").after(g); }
-  g.innerHTML = gateText(i);
-}
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parseYmd = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const today = () => ymd(new Date());
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const nice = s => { if(!s) return ""; const d = parseYmd(s); return DOW[d.getDay()]+" "+d.getDate()+" "+MON[d.getMonth()]; };
+const time12 = t => { if(!t) return ""; let [h,m] = t.split(":").map(Number); const ap = h<12?"am":"pm"; h = h%12||12; return h+(m?":"+pad(m):"")+ap; };
+const fmtName = f => (FORMATS.find(x=>x[0]===f)||["","Post"])[1];
+const getPost = id => S.posts.find(p=>p.id===id);
+const activePlats = p => PLATS.filter(([k])=>p.plats[k]);
+const isPosted = p => { const a = activePlats(p); return a.length>0 && a.every(([k])=>p.posted[k]); };
+const anyPosted = p => PLATS.some(([k])=>p.posted[k]);
+const stageOf = p => isPosted(p) ? "posted" : (p.date ? "scheduled" : p.stage);
+const titleOf = p => (p.title||"").trim() || (p.hook||"").trim().split("\n")[0] || ("Untitled "+fmtName(p.format).toLowerCase());
+const num = v => Number(v)||0;
+const viewsOf = p => PLATS.reduce((s,[k])=>s+num(p.stats[k].views),0);
+const postedAt = p => Math.max(num(p.posted.ig), num(p.posted.fb));
 
-/* Plain text for a teleprompter app: opening line, then one beat per line. */
-function tprompt(i){
-  const B = beatsOf(i).filter(b=>(b.t||"").trim());
-  const lines = [];
-  B.forEach(b=>{
-    lines.push("- "+b.t.trim());
-    if((b.d||"").trim()) lines.push("   > "+b.d.trim());
-    lines.push("");
+function tagsOf(p){
+  const set = S.tagSets.find(t=>t.id===p.tagSet);
+  const raw = ((set?set.tags:"")+" "+(p.extraTags||"")).split(/[\s,]+/).filter(Boolean);
+  const seen = new Set(), out = [];
+  raw.forEach(t=>{ t = "#"+t.replace(/^#+/,""); const k = t.toLowerCase(); if(t.length>1 && !seen.has(k)){ seen.add(k); out.push(t); } });
+  return out;
+}
+function textFor(p, plat){
+  const cap = plat==="fb" && (p.fbCaption||"").trim() ? p.fbCaption : p.caption;
+  const lim = plat==="fb" ? num(S.brand.fbTags) : num(S.brand.igTags);
+  const tags = tagsOf(p).slice(0, lim);
+  return [(cap||"").trim(), (p.cta||"").trim(), tags.join(" ")].filter(Boolean).join("\n\n");
+}
+function slidesText(p){
+  const out = ["Slide 1 (cover): "+(p.hook||"").trim()];
+  p.slides.forEach((s,i)=>{ out.push("Slide "+(i+2)+": "+(s.t||"").trim() + ((s.d||"").trim() ? "\n  "+s.d.trim() : "")); });
+  return out.join("\n");
+}
+function scriptText(p){
+  const out = [];
+  if((p.hook||"").trim()) out.push("ON SCREEN: "+p.hook.trim(), "");
+  p.beats.forEach(b=>{
+    if(!(b.t||"").trim() && !(b.d||"").trim()) return;
+    out.push((b.g||"Beat").toUpperCase()+": "+(b.t||"").trim());
+    if((b.d||"").trim()) out.push("  say: "+b.d.trim());
+    out.push("");
   });
-  return lines.join("\n").trim();
+  if((p.audio||"").trim()) out.push("AUDIO: "+p.audio.trim());
+  return out.join("\n").trim();
 }
 
-/* Clipboard with a fallback for browsers that block the API on this page. */
-async function copyText(txt, msgEl, nearEl){
-  try{
-    await navigator.clipboard.writeText(txt);
-    if(msgEl) msgEl.textContent = "copied";
-    setTimeout(()=>{ if(msgEl) msgEl.textContent=""; }, 2000);
-    return;
-  }catch(e){}
-  if(msgEl) msgEl.textContent = "select and copy below";
+let toastTimer;
+function toast(msg){
+  const t = el("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("on"), 1800);
+}
+async function copyText(txt, near){
+  if(!txt.trim()){ toast("Nothing to copy yet"); return; }
+  try{ await navigator.clipboard.writeText(txt); toast("Copied"); return; }catch(e){}
   const ta = document.createElement("textarea");
-  ta.value = txt; ta.className = "mono";
-  ta.style.cssText = "width:100%;min-height:150px;margin-top:8px;font-size:13px";
-  (nearEl||document.body).after(ta); ta.focus(); ta.select();
+  ta.className = "copybox"; ta.value = txt;
+  (near||el("toast")).after(ta); ta.focus(); ta.select();
+  toast("Select and copy the text below");
 }
-function showTab(p){
-  document.querySelectorAll(".clip").forEach(x=>x.classList.toggle("on",x.dataset.p===p));
-  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="s-"+p));
-  window.scrollTo({top:0,behavior:"instant"});
-}
-document.querySelectorAll(".clip").forEach(c=>c.onclick=()=>showTab(c.dataset.p));
 
-/* ---- add ---- */
-el("add").onclick = ()=>{
-  const h = el("i-topic").value.trim(); if(!h) return;
-  S.ideas.unshift({id:"i"+Date.now(), topic:h, note:el("i-note").value.trim(),
-    cat:el("i-pillar").value||"Channeled Message",
-    beats:[], shots:[], checks:{}, stage:"batch", created:Date.now()});
-  el("i-topic").value=""; el("i-note").value=""; el("i-pillar").value="Channeled Message"; save(); render();
-  showTab("batch");
-};
-
-function card(i){
-  const sel = (name,opts,val,k)=>`<select data-act="${name}" data-id="${i.id}"${k!==undefined?` data-k="${k}"`:""}>`+
-    opts.map(o=>{const v=Array.isArray(o)?o[0]:o, l=Array.isArray(o)?o[1]:o;
-      return `<option value="${esc(v)}"${v===val?" selected":""}>${esc(l)}</option>`}).join("")+`</select>`;
-
-  let body = "", head = "";
-  if(i.stage==="capture" || i.stage==="batch"){
-    head = `<textarea class="hook-edit" data-act="topicbox" data-id="${i.id}"
-        placeholder="what's this one about?">${esc(topicOf(i))}</textarea>
-      <input class="note-edit" type="text" data-act="notebox" data-id="${i.id}"
-        placeholder="note to self (optional)" value="${esc(i.note||"")}">`;
-  }
-  if(i.stage==="capture"){
-    body = `<div class="selects">${sel("cat",PILLARS,i.cat)}</div>
-      <div class="row"><button class="tiny" data-act="to-batch" data-id="${i.id}">Send to Batch</button>
-      <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
-  }
-  if(i.stage==="batch"){
-    const B = beatsOf(i), n = done(i), segs = B.length || 3;
-    const shotsIdx = (i.shots||[]).map((s,x)=>({s,x}));
-    const unassigned = shotsIdx.filter(o=>!B.some(bt=>bt.id===o.s.beatId));
-    const beatOpts = [["","Unassigned"]].concat(B.map((bt,x)=>
-      [bt.id, `${String(x+1).padStart(2,"0")} ${glabel(bt,x)||"Beat"}${(bt.t||"").trim()?" — "+bt.t.trim().slice(0,22):""}`]));
-    const shotRow = o => `<div class="shot-row">
-      <label class="check${o.s.done?" done":""}">
-        <input type="checkbox" data-act="shotdone" data-id="${i.id}" data-k="${o.x}"${o.s.done?" checked":""}>
-        <span>${esc(o.s.t)}</span>
-      </label>
-      ${sel("shotfootage",FOOTAGE,o.s.footage||"",o.x)}
-      ${sel("shotbeat",beatOpts,o.s.beatId||"",o.x)}
-    </div>`;
-    body = `<div class="selects">${sel("cat",PILLARS,i.cat)}</div>
-      <div class="strip">${Array.from({length:segs},(_,x)=>`<div class="seg${x<n?" done":""}"></div>`).join("")}</div>
-      <div class="row">
-        <button class="ghost tiny" data-act="beats" data-id="${i.id}">${open[i.id]?"Hide beat sheet":"Beat sheet"} ${B.length?n+"/"+B.length:""}${(i.shots||[]).length?" · "+i.shots.length+" shots":""}</button>
-        <button class="tiny" data-act="to-ready" data-id="${i.id}"${isReady(i)?"":" disabled style=\"opacity:.35;cursor:default\""}>Ready to film →</button>
-      </div>
-      ${isReady(i)?"":`<div class="gate">${gateText(i)}</div>`}
-      <div class="row">
-        <button class="tiny" data-act="tp" data-id="${i.id}">Copy as Text</button>
-        <span class="count" id="tp-${i.id}"></span>
-      </div>
-      <div class="row">
-        <button class="ghost tiny" data-act="to-capture" data-id="${i.id}">Back to Capture</button>
-        <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button>
-      </div>
-      <div class="beats${open[i.id]?" open":""}">
-        <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">BEAT SHEET</div>
-        <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Beat 01 is always your hook — say that one how you'd actually say it. Everything after is keywords only, 2–5 words.</div>
-        <div class="guide">${GUIDE.slice(1).map(g=>`<span class="g"><b>${g[0]}</b> · ${esc(g[1])}</span>`).join("")}</div>
-        ${B.map((b,x)=>`<div class="beat">
-          <div class="beat-top">
-            <span class="tc">${String(x+1).padStart(2,"0")}</span>
-            ${glabel(b,x)?`<span class="nm"${x===0?' style="color:var(--grade)"':""}>${esc(glabel(b,x))}</span>`:""}
-            <span class="beat-tools">
-              <button data-act="beatup" data-id="${i.id}" data-k="${x}"${x===0?" disabled":""} aria-label="Move beat up">↑</button>
-              <button data-act="beatdown" data-id="${i.id}" data-k="${x}"${x===B.length-1?" disabled":""} aria-label="Move beat down">↓</button>
-              <button data-act="beatdel" data-id="${i.id}" data-k="${x}" aria-label="Remove beat">✕</button>
-            </span>
-          </div>
-          <input type="text" data-act="beattrig" data-id="${i.id}" data-k="${x}"
-            placeholder="${x===0?"the first line out of your mouth":"what you're saying here — keywords only"}" value="${esc(b.t||"")}">
-          <div class="anchor">
-            <label for="bd-${i.id}-${x}">Detail</label>
-            <input type="text" id="bd-${i.id}-${x}" data-act="beatdetail" data-id="${i.id}" data-k="${x}"
-              placeholder="the exact name, number, or line you keep forgetting" value="${esc(b.d||"")}">
-          </div>
-          <div class="beat-shots">
-            ${shotsIdx.filter(o=>o.s.beatId===b.id).map(shotRow).join("")}
-            <div style="margin-top:8px">
-              <input type="text" data-act="shotenter" data-id="${i.id}" data-beat="${b.id}" placeholder="add a shot for this beat">
-              <button class="ghost tiny" data-act="shotadd" data-id="${i.id}" data-beat="${b.id}" style="margin-top:6px">+ Add</button>
-            </div>
-          </div>
-        </div>`).join("") || `<div class="empty" style="padding:16px 12px">No beats yet. Add them in the order you'll say them.</div>`}
-        <div class="row">
-          <button class="ghost tiny" data-act="beatadd" data-id="${i.id}">+ Add beat</button>
-          ${B.length?"":`<button class="ghost tiny" data-act="beatfmt" data-id="${i.id}">Use the Hook / Retain / Reward format</button>`}
-        </div>
-        <div class="unassigned-shots">
-          <div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.12em">UNASSIGNED SHOTS</div>
-          <div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Name the actual shot, not the category. "Rabbit chewing the baseboard behind my desk," not "b-roll." Pick a beat above once you know where it lands.</div>
-          ${unassigned.map(shotRow).join("")||`<div style="font-size:13px;color:var(--muted);padding:4px 0">No unassigned shots.</div>`}
-          <div style="margin-top:8px">
-            <input type="text" data-act="shotenter" data-id="${i.id}" data-beat="" placeholder="describe one shot, then add it">
-            <button class="ghost tiny" data-act="shotadd" data-id="${i.id}" data-beat="" style="margin-top:6px">+ Add</button>
-          </div>
-          ${(i.shots||[]).some(s=>s.done)?`<div class="row"><button class="ghost tiny" data-act="shotclear" data-id="${i.id}">Clear filmed</button></div>`:""}
-        </div>
-      </div>`;
-  }
-  if(i.stage==="ready"){
-    const B = beatsOf(i).filter(b=>(b.t||"").trim());
-    body = `<div class="strip">${B.map(()=>`<div class="seg done"></div>`).join("")}</div>
-      ${B.map((b,x)=>`<div class="beat" style="border-left-color:var(--ready)">
-        <div class="beat-top"><span class="tc">${String(x+1).padStart(2,"0")}</span>
-        ${glabel(b,x)?`<span class="nm" style="color:${x===0?"var(--grade)":"var(--ready)"}">${esc(glabel(b,x))}</span>`:""}</div>
-        <div style="font-size:16px;font-weight:600">${esc(b.t)}</div>
-        ${(b.d||"").trim()?`<div class="anchor"><label>Detail</label>
-          <div class="mono" style="font-size:13px;color:var(--grade)">${esc(b.d)}</div></div>`:""}
-      </div>`).join("")}
-      <div style="font:500 10px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--muted);margin:12px 0 6px">SHOTS</div>
-      ${(i.shots||[]).map((s,x)=>`<label class="check${s.done?" done":""}">
-        <input type="checkbox" data-act="shotdone" data-id="${i.id}" data-k="${x}"${s.done?" checked":""}>
-        <span>${esc(s.t)}</span></label>`).join("")||`<div style="font-size:13px;color:var(--muted)">No shots listed.</div>`}
-      <div class="row"><button class="tiny" data-act="tp" data-id="${i.id}">Copy for teleprompter</button>
-      <span class="count" id="tp-${i.id}"></span></div>
-      <div class="row"><button class="tiny" data-act="to-ship" data-id="${i.id}">Filmed → Ship</button>
-      <button class="ghost tiny" data-act="back" data-id="${i.id}">Back to Batch</button>
-      <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
-  }
-  if(i.stage==="ship"){
-    body = `${EDITS.map((c,x)=>`<label class="check${i.checks[x]?" done":""}">
-        <input type="checkbox" data-act="check" data-id="${i.id}" data-k="${x}"${i.checks[x]?" checked":""}><span>${c}</span></label>`).join("")}
-      <div style="margin-top:10px">
-        <label class="f">Caption</label>
-        <textarea data-act="captionbox" data-id="${i.id}" style="min-height:70px" placeholder="Write it now, not while you're staring at the upload screen.">${esc(i.caption||"")}</textarea>
-      </div>
-      <div class="row"><button class="tiny" data-act="cap" data-id="${i.id}"${(i.caption||"").trim()?"":" disabled style=\"opacity:.35;cursor:default\""}>Copy caption</button>
-      <span class="count" id="cap-${i.id}"></span></div>
-      <div class="row"><button class="tiny" data-act="posted" data-id="${i.id}">Mark posted</button>
-      <button class="ghost tiny" data-act="back" data-id="${i.id}">Back to Batch</button></div>`;
-  }
-  if(i.stage==="posted"){
-    body = `${(i.caption||"").trim()?`<div class="note" style="white-space:pre-wrap">${esc(i.caption)}</div>`:""}
-      <div style="margin-top:6px"><label class="f">Posted on</label>
-      <input type="date" data-act="pdate" data-id="${i.id}" value="${esc(i.posted||"")}"></div>
-      <div class="row">${(i.caption||"").trim()?`<button class="ghost tiny" data-act="cap" data-id="${i.id}">Copy caption</button><span class="count" id="cap-${i.id}"></span>`:""}</div>
-      <div class="row"><button class="ghost tiny" data-act="back" data-id="${i.id}">Back to Batch</button>
-      <button class="ghost tiny" data-act="del" data-id="${i.id}">Delete</button></div>`;
-  }
-  if(!head) head = `<div class="hook">${esc(topicOf(i))}</div>`+
-    (i.note?`<div class="note">${esc(i.note)}</div>`:"");
-  return `<article class="idea" data-stage="${i.stage}">${head}
-    <div class="meta">${esc(i.cat)}${i.stage==="posted"?" · posted "+esc(i.posted||""):""}</div>
-    ${body}</article>`;
-}
+/* ============================================================
+   VIEW STATE
+   ============================================================ */
+let view = "today", editing = null, weekOff = 0, sparkIdx = Math.floor(Math.random()*SPARKS.length);
+const PF = {stage:"all", format:"all", q:""};
+let ideaPillar = "all";
 
 function render(){
-  const by = st => S.ideas.filter(i=>i.stage===st && matches(i));
-  el("list-capture").innerHTML = by("capture").map(card).join("") ||
-    `<div class="empty">Nothing captured yet. Add a hook the second it occurs to you — you will not remember it later.</div>`;
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on", b.dataset.v===view));
+  document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on", s.id==="v-"+view));
+  const d = new Date();
+  el("hdr-date").textContent = DOW[d.getDay()]+", "+d.getDate()+" "+MON[d.getMonth()];
+  el("hdr-name").textContent = S.brand.name.trim() || "Theme Page Studio";
+  ({today:renderToday, ideas:renderIdeas, posts:renderPosts, plan:renderPlan, kit:renderKit})[view]();
+}
 
-  const f = el("filter");
-  const sp = el("spark-pillar");
-  if(sp.options.length===0) sp.innerHTML = `<option value="all">Any pillar</option>`+
-    Object.keys(SPARKS).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
-  const ip = el("i-pillar");
-  if(ip.options.length===0) ip.innerHTML = PILLARS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
-  if(f.options.length===0){ f.innerHTML = `<option value="all">All pillars</option>`+
-    PILLARS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join(""); f.value = filter; }
-  const b = by("batch").filter(i=>filter==="all"||i.cat===filter);
-  el("list-batch").innerHTML = b.map(card).join("") ||
-    `<div class="empty">Nothing in this batch. Send ideas over from Capture.</div>`;
+function platBadges(p){
+  return activePlats(p).map(([k,,s])=>`<span class="pb ${k} ${p.posted[k]?"posted":""}"><span>${p.posted[k]?"✓ ":""}${s}</span></span>`).join(" ");
+}
+function postCard(p){
+  const st = stageOf(p);
+  const when = p.date ? nice(p.date)+(p.time?" · "+time12(p.time):"") : "";
+  return `<button class="pc" data-fmt="${p.format}" data-a="open" data-id="${p.id}">
+    <span class="ft ${p.format}">${fmtName(p.format)}</span> <span class="stage ${st}">${st}</span>
+    <span class="t">${esc(titleOf(p))}</span>
+    <span class="m">${platBadges(p)}${p.pillar?"<span>· "+esc(p.pillar)+"</span>":""}${when?"<span>· "+when+"</span>":""}</span>
+  </button>`;
+}
+function quickCard(p){
+  const btns = activePlats(p).map(([k,,s])=>`
+    <button class="tiny ghost" data-a="copy" data-what="${k}" data-id="${p.id}">Copy ${s}</button>
+    <button class="tiny ${p.posted[k]?"done":"ghost"}" data-a="posted" data-pl="${k}" data-id="${p.id}">${p.posted[k]?"✓ Posted":"Mark posted"} ${s}</button>`).join("");
+  return `<div class="qc" data-fmt="${p.format}">
+    <button class="open" data-a="open" data-id="${p.id}">
+      <span class="ft ${p.format}">${fmtName(p.format)}</span> <span class="small">${p.time?time12(p.time):"No time set"}${p.date && p.date!==today()?" · "+nice(p.date):""}</span>
+      <span class="t">${esc(titleOf(p))}</span>
+    </button>
+    <div class="row">${btns}</div>
+  </div>`;
+}
 
-  el("list-ready").innerHTML = by("ready").map(card).join("") ||
-    `<div class="empty">Nothing ready yet. A card moves here once it has beats written and shots listed.</div>`;
+/* ---------- TODAY ---------- */
+function countFor(date, plat){ return S.posts.filter(p=>p.date===date && p.plats[plat]).length; }
+function renderToday(){
+  const t = today(), goal = Math.max(1, num(S.brand.perDay));
+  const strip = [...Array(7)].map((_,i)=>{
+    const d = addDays(new Date(), i), k = ymd(d);
+    return `<button class="wd ${i===0?"today":""}" data-a="goplan" data-date="${k}">
+      <div class="d">${DOW[d.getDay()]}</div><div class="n">${d.getDate()}</div>
+      <div class="dots">${PLATS.map(([pl])=>`<span class="dot ${pl} ${countFor(k,pl)>=goal?"on":""}"></span>`).join("")}</div></button>`;
+  }).join("");
 
-  const all = by("ready");
-  /* Footage lives on the shot now, not the idea, so the plan groups
-     individual unfilmed shots by type, then by the pillar of the card
-     they belong to — a card with nothing left to film just drops out. */
-  const LBL = {evidence:"Evidence shots",anchor:"Anchor footage","":"Type not set"};
-  const lab = s => `font:500 10px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;color:${s}`;
-  let plan = "";
-  ["evidence","anchor",""].forEach(k=>{
-    const grp = all.flatMap(i=>(i.shots||[]).filter(s=>!s.done && (s.footage||"")===k).map(s=>({s:s.t,h:topicOf(i),cat:i.cat})));
-    if(!grp.length) return;
-    plan += `<div style="margin-bottom:14px">
-      <div style="${lab("var(--ink)")};margin-bottom:6px">${LBL[k].toUpperCase()} · ${grp.length} ${grp.length===1?"shot":"shots"}</div>`;
-    PILLARS.forEach(p=>{
-      const sub = grp.filter(o=>o.cat===p); if(!sub.length) return;
-      plan += `<div style="margin:0 0 8px 10px;border-left:2px solid var(--line);padding-left:8px">
-        <div style="${lab("var(--mid)")};margin-bottom:4px">${esc(p.toUpperCase())} · ${sub.length}</div>`+
-        sub.map(o=>`<div style="padding:3px 0;border-bottom:1px solid var(--line)">${esc(o.s)}<div style="font-size:11px;color:var(--muted)">${esc(o.h.slice(0,54))}</div></div>`).join("")+
-        `</div>`;
-    });
-    plan += `</div>`;
+  const due = S.posts.filter(p=>p.date===t).sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
+  const missed = S.posts.filter(p=>p.date && p.date<t && !isPosted(p)).sort((a,b)=>a.date.localeCompare(b.date));
+  const weekAgo = Date.now() - 7*864e5;
+  const counts = {
+    ideas:S.ideas.length,
+    drafts:S.posts.filter(p=>stageOf(p)==="draft").length,
+    ready:S.posts.filter(p=>["ready","scheduled"].includes(stageOf(p))).length,
+    posted:S.posts.filter(p=>postedAt(p)>weekAgo).length
+  };
+  const empties = [...Array(7)].reduce((n,_,i)=>{ const k = ymd(addDays(new Date(),i)); return n + PLATS.filter(([pl])=>countFor(k,pl)<goal).length; },0);
+
+  el("v-today").innerHTML = `
+    <div class="panel">
+      <h3>Next 7 days</h3>
+      <div class="week">${strip}</div>
+      <div class="legend"><span><i style="background:var(--ig)"></i>Instagram</span><span><i style="background:var(--fb)"></i>Facebook</span>
+        <span class="grow" style="text-align:right">${empties?empties+" open slot"+(empties===1?"":"s"):"All filled ✨"}</span></div>
+    </div>
+
+    <h2>Post today</h2>
+    <div class="list" style="margin:8px 0 18px">${due.length ? due.map(quickCard).join("") :
+      `<div class="empty">Nothing scheduled for today.<div class="row" style="justify-content:center"><button class="tiny" data-a="new" data-date="${t}">+ New post for today</button><button class="tiny ghost" data-a="tab" data-v="plan">Open plan</button></div></div>`}</div>
+
+    ${missed.length ? `<h2>Missed</h2><p class="sub">Scheduled earlier but not marked posted. Post it, mark it, or move the date.</p>
+      <div class="list" style="margin-bottom:18px">${missed.map(quickCard).join("")}</div>` : ""}
+
+    <div class="stats4" style="margin-bottom:18px">
+      <button class="stat" data-a="tab" data-v="ideas"><b>${counts.ideas}</b><span>Ideas</span></button>
+      <button class="stat" data-a="pfgo" data-v="draft"><b>${counts.drafts}</b><span>Drafts</span></button>
+      <button class="stat" data-a="pfgo" data-v="ready"><b>${counts.ready}</b><span>Ready</span></button>
+      <button class="stat" data-a="pfgo" data-v="posted"><b>${counts.posted}</b><span>Posted 7d</span></button>
+    </div>
+
+    <h2>What's working</h2>
+    <div class="panel" style="margin-top:8px">${insights()}</div>`;
+}
+
+function avgBy(list, keyFn){
+  const g = {};
+  list.forEach(p=>{ const k = keyFn(p); if(!k) return; (g[k] = g[k]||[]).push(viewsOf(p)); });
+  return Object.entries(g).map(([k,v])=>[k, Math.round(v.reduce((a,b)=>a+b,0)/v.length), v.length]).sort((a,b)=>b[1]-a[1]);
+}
+function bars(rows){
+  const max = Math.max(1, ...rows.map(r=>r[1]));
+  return rows.map(([k,v,n])=>`<div class="bar"><span>${esc(k)}</span><div class="track"><div class="fill" style="width:${Math.max(3,v/max*100)}%"></div></div><span class="v">${v.toLocaleString()}</span></div>`).join("");
+}
+function insights(){
+  const L = S.posts.filter(p=>anyPosted(p) && viewsOf(p)>0);
+  if(!L.length) return `<p class="small">Once you log views on posted posts (open a post → Results), this shows your best posts, and which formats and pillars get the most views.</p>`;
+  const top = [...L].sort((a,b)=>viewsOf(b)-viewsOf(a)).slice(0,3);
+  return `<h3>Top posts</h3><div class="list">${top.map(p=>`<button class="pc" data-fmt="${p.format}" data-a="open" data-id="${p.id}">
+      <span class="ft ${p.format}">${fmtName(p.format)}</span><span class="t">${esc(titleOf(p))}</span>
+      <span class="m">${viewsOf(p).toLocaleString()} views</span></button>`).join("")}</div>
+    <h3 style="margin-top:16px">Average views by format</h3>${bars(avgBy(L,p=>fmtName(p.format)))}
+    <h3 style="margin-top:16px">Average views by pillar</h3>${bars(avgBy(L,p=>p.pillar))}`;
+}
+
+/* ---------- IDEAS ---------- */
+const pillarOpts = (sel, blank) => (blank?`<option value="">${blank}</option>`:"") +
+  S.pillars.map(p=>`<option ${p===sel?"selected":""}>${esc(p)}</option>`).join("") +
+  (sel && !S.pillars.includes(sel) ? `<option selected>${esc(sel)}</option>` : "");
+const formatOpts = sel => FORMATS.map(([k,n])=>`<option value="${k}" ${k===sel?"selected":""}>${n}</option>`).join("");
+
+function renderIdeas(){
+  const list = S.ideas.filter(i=>ideaPillar==="all" || i.pillar===ideaPillar);
+  el("v-ideas").innerHTML = `
+    <h2>Ideas</h2><p class="sub">Save every idea here. When you're ready to build one, tap <b>Make post</b>.</p>
+    <div class="panel">
+      <label class="f">New idea</label>
+      <textarea id="idea-text" placeholder="e.g. 5 affirmations for money to say before bed"></textarea>
+      <div class="two"><div><label class="f">Format</label><select id="idea-fmt">${formatOpts("reel")}</select></div>
+        <div><label class="f">Pillar</label><select id="idea-pillar">${pillarOpts("", "No pillar")}</select></div></div>
+      <div class="row"><button data-a="idea-add">Save idea</button></div>
+    </div>
+    <div class="panel">
+      <h3>Need a spark?</h3>
+      <div class="spark" id="spark">${esc(SPARKS[sparkIdx])}</div>
+      <div class="row"><button class="ghost tiny" data-a="spark-next">Another</button><button class="tiny" data-a="spark-save">Save this idea</button></div>
+    </div>
+    <div class="chips">${["all",...S.pillars].map(p=>`<button class="chip ${ideaPillar===p?"on":""}" data-a="ideapf" data-v="${esc(p)}">${p==="all"?"All ("+S.ideas.length+")":esc(p)}</button>`).join("")}</div>
+    <div class="list">${list.length ? list.map(i=>`<div class="idea">
+        <p>${esc(i.text)}</p>
+        <div class="row" style="margin-top:0">
+          <span class="ft ${i.format}">${fmtName(i.format)}</span>${i.pillar?`<span class="small">${esc(i.pillar)}</span>`:""}
+          <span class="grow"></span>
+          <button class="tiny ghost danger" data-a="idea-del" data-id="${i.id}">Delete</button>
+          <button class="tiny" data-a="idea-make" data-id="${i.id}">Make post</button>
+        </div></div>`).join("") : `<div class="empty">No ideas here yet.</div>`}</div>`;
+}
+
+/* ---------- POSTS ---------- */
+function renderPosts(){
+  const q = PF.q.toLowerCase();
+  const list = S.posts.filter(p=>{
+    if(PF.stage!=="all" && stageOf(p)!==PF.stage && !(PF.stage==="ready" && stageOf(p)==="scheduled")) return false;
+    if(PF.format!=="all" && p.format!==PF.format) return false;
+    if(q && ![p.title,p.hook,p.caption,p.pillar,p.cta].join(" ").toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b)=>{
+    const pa = isPosted(a), pb = isPosted(b);
+    if(pa!==pb) return pa?1:-1;
+    if(pa) return postedAt(b)-postedAt(a);
+    return (a.date||"9999").localeCompare(b.date||"9999") || b.updated-a.updated;
   });
-  el("ready-plan").innerHTML = plan || `<p style="font-size:14px;color:var(--muted)">Nothing ready to film yet.</p>`;
-
-  const shipped = S.ideas.filter(i=>(i.stage==="ship"||i.stage==="posted") && matches(i))
-    .sort((a,b)=> (a.stage===b.stage) ? String(b.posted||"").localeCompare(String(a.posted||"")) : (a.stage==="ship"?-1:1));
-  el("list-ship").innerHTML = shipped.map(card).join("") ||
-    `<div class="empty">Nothing filmed yet. Move an idea over once it's shot.</div>`;
-
-  if(q){
-    const n = S.ideas.filter(matches).length;
-    el("hits").textContent = n+(n===1?" card matches":" cards match");
-  } else el("hits").textContent = "";
-  el("c-capture").textContent = by("capture").length+" waiting";
-  el("c-batch").textContent = by("batch").length+" to shape";
-  el("c-ready").textContent = all.length+" to film";
-  el("c-ship").textContent = by("ship").length+" to post";
-  el("grading").value = S.grading; el("review").value = S.review;
+  const stages = [["all","All"],["draft","Drafts"],["ready","Ready"],["scheduled","Scheduled"],["posted","Posted"]];
+  el("v-posts").innerHTML = `
+    <h2>Posts</h2>
+    <div class="row" style="margin:6px 0 14px">${FORMATS.map(([k,n])=>`<button class="tiny" data-a="new" data-fmt="${k}">+ ${n}</button>`).join("")}</div>
+    <input type="text" id="post-q" placeholder="Search posts" value="${esc(PF.q)}" style="margin-bottom:10px">
+    <div class="chips">${stages.map(([k,n])=>`<button class="chip ${PF.stage===k?"on":""}" data-a="pf" data-k="stage" data-v="${k}">${n}</button>`).join("")}</div>
+    <div class="chips">${[["all","All formats"],...FORMATS].map(([k,n])=>`<button class="chip ${PF.format===k?"on":""}" data-a="pf" data-k="format" data-v="${k}">${n}</button>`).join("")}</div>
+    <div class="list" id="post-list">${list.length ? list.map(postCard).join("") : `<div class="empty">${S.posts.length?"No posts match.":"No posts yet. Start one above, or turn an idea into a post."}</div>`}</div>`;
 }
 
-/* ---- undo ---- */
-el("undo").addEventListener("click", ()=>{
-  if(!trash) return;
-  S.ideas.splice(Math.max(0,trash.at), 0, trash.idea);
-  trash = null; clearTimeout(trashTimer);
-  el("toast").classList.remove("show"); save(); render();
-});
-
-/* ---- spark prompts ---- */
-function sparkPool(){
-  const v = el("spark-pillar").value;
-  return v==="all" ? Object.values(SPARKS).flat() : (SPARKS[v]||[]);
+/* ---------- PLAN ---------- */
+function weekStart(off){
+  const d = new Date(); d.setHours(0,0,0,0);
+  const back = (d.getDay()+6)%7; // Monday start
+  return addDays(d, -back + off*7);
 }
-function drawSpark(){
-  if(!sparkQueue.length){
-    sparkQueue = sparkPool().slice();
-    for(let x=sparkQueue.length-1;x>0;x--){ const j=Math.floor(Math.random()*(x+1)); [sparkQueue[x],sparkQueue[j]]=[sparkQueue[j],sparkQueue[x]]; }
-    if(sparkQueue.length>1 && sparkQueue[0]===sparkCurrent) sparkQueue.push(sparkQueue.shift());
+function renderPlan(){
+  const ws = weekStart(weekOff), goal = Math.max(1, num(S.brand.perDay)), t = today();
+  const days = [...Array(7)].map((_,i)=>{
+    const d = addDays(ws,i), k = ymd(d);
+    const posts = S.posts.filter(p=>p.date===k).sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
+    const gaps = k>=t ? PLATS.filter(([pl])=>countFor(k,pl)<goal).map(([,n])=>`<span class="gap">No ${n} post</span>`).join("") : "";
+    return `<div class="day ${k===t?"today":""}">
+      <div class="dh"><b>${DOW[d.getDay()]} ${d.getDate()}</b><span class="small">${MON[d.getMonth()]}${k===t?" · today":""}</span>
+        <button class="tiny ghost" data-a="new" data-date="${k}">+ Add</button></div>
+      ${gaps?`<div style="margin-bottom:6px">${gaps}</div>`:""}
+      <div class="list">${posts.map(postCard).join("")}</div></div>`;
+  }).join("");
+  const unscheduled = S.posts.filter(p=>!p.date && !isPosted(p) && p.stage==="ready");
+  const end = addDays(ws,6);
+  el("v-plan").innerHTML = `
+    <h2>Plan</h2>
+    <div class="row" style="margin:6px 0 16px">
+      <button class="ghost tiny" data-a="wk" data-v="-1" aria-label="Previous week">‹</button>
+      <span class="grow" style="text-align:center;font-weight:700">${ws.getDate()} ${MON[ws.getMonth()]} – ${end.getDate()} ${MON[end.getMonth()]}</span>
+      <button class="ghost tiny" data-a="wk" data-v="1" aria-label="Next week">›</button>
+      ${weekOff?`<button class="ghost tiny" data-a="wk" data-v="0">This week</button>`:""}
+    </div>
+    ${days}
+    <h2 style="margin-top:20px">Ready, not scheduled</h2>
+    <p class="sub">Open one and give it a date to put it on the plan.</p>
+    <div class="list">${unscheduled.length ? unscheduled.map(postCard).join("") : `<div class="empty">Nothing waiting. Posts marked Ready without a date show up here.</div>`}</div>`;
+}
+
+/* ---------- KIT ---------- */
+function renderKit(){
+  const B = S.brand;
+  el("kit-dyn").innerHTML = `
+    <h2>Kit</h2><p class="sub">Your brand settings, hashtag sets and saved lines. Everything here shows up while you build posts.</p>
+    <div class="panel">
+      <h3>Brand</h3>
+      <label class="f">Brand name</label><input type="text" data-kit="name" value="${esc(B.name)}" placeholder="e.g. Manifest Daily">
+      <div class="two">
+        <div><label class="f">Instagram handle</label><input type="text" data-kit="ig" value="${esc(B.ig)}" placeholder="@yourpage"></div>
+        <div><label class="f">Facebook page</label><input type="text" data-kit="fb" value="${esc(B.fb)}" placeholder="Page name"></div>
+      </div>
+      <div class="two">
+        <div><label class="f">Posts per day, per platform</label><input type="number" min="1" max="10" inputmode="numeric" data-kitn="perDay" value="${esc(B.perDay)}"></div>
+        <div><label class="f">Default post time</label><input type="time" data-kit="time" value="${esc(B.time)}"></div>
+      </div>
+      <div class="two">
+        <div><label class="f">Max hashtags, Instagram</label><input type="number" min="0" max="30" inputmode="numeric" data-kitn="igTags" value="${esc(B.igTags)}"></div>
+        <div><label class="f">Max hashtags, Facebook</label><input type="number" min="0" max="30" inputmode="numeric" data-kitn="fbTags" value="${esc(B.fbTags)}"></div>
+      </div>
+      <p class="small" style="margin-top:6px">Copy buttons keep only the first that many tags, so you can save bigger sets.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Hashtag sets</h3>
+      ${S.tagSets.map(t=>`<div class="item">
+        <div class="item-top"><input type="text" data-ts="${t.id}" data-k="name" value="${esc(t.name)}" style="margin:0;font-weight:700">
+          <button data-a="ts-del" data-id="${t.id}" aria-label="Delete set">✕</button></div>
+        <textarea data-ts="${t.id}" data-k="tags">${esc(t.tags)}</textarea>
+        <div class="count" id="tsn-${t.id}">${tagCount(t.tags)} tags</div></div>`).join("")}
+      <button class="ghost tiny" data-a="ts-add">+ Add set</button>
+    </div>
+
+    <div class="panel">
+      <h3>Content pillars</h3><p class="small" style="margin-bottom:8px">The themes you post about, one per line.</p>
+      <textarea data-lines="pillars" rows="6">${esc(S.pillars.join("\n"))}</textarea>
+    </div>
+    <div class="panel">
+      <h3>Hook bank</h3><p class="small" style="margin-bottom:8px">Opening lines you reuse, one per line. Tap one while building a post to drop it in.</p>
+      <textarea data-lines="hooks" rows="7">${esc(S.hooks.join("\n"))}</textarea>
+    </div>
+    <div class="panel">
+      <h3>Calls to action</h3><p class="small" style="margin-bottom:8px">One per line. Added after the caption when you copy.</p>
+      <textarea data-lines="ctas" rows="4">${esc(S.ctas.join("\n"))}</textarea>
+    </div>
+
+    <div class="panel">
+      <h3>Backup</h3>
+      <p class="small">Your work saves on this device automatically. Keep a backup too, especially if you don't use sync.</p>
+      <div class="row"><button class="ghost tiny" data-a="export">Download backup</button><button class="ghost tiny" data-a="copy-backup">Copy backup</button>
+        <label class="tiny ghost" style="display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-weight:600;font-size:13px;cursor:pointer;min-height:32px">Restore…<input type="file" accept="application/json,.json" id="import-file" style="display:none"></label></div>
+    </div>`;
+}
+const tagCount = s => (s||"").split(/[\s,]+/).filter(x=>x.replace(/^#+/,"")).length;
+
+/* ============================================================
+   EDITOR
+   ============================================================ */
+const cur = () => editing ? getPost(editing) : null;
+function openEditor(id){
+  editing = id; el("sheet").classList.add("on"); document.body.classList.add("locked");
+  renderEditor(); el("sheet").scrollTop = 0;
+}
+function closeEditor(){
+  editing = null; el("sheet").classList.remove("on"); document.body.classList.remove("locked");
+  el("sheet").innerHTML = "";
+}
+
+function listItems(p, key){
+  const items = p[key], n = items.length;
+  return items.map((it,i)=>{
+    const lbl = key==="beats" ? (it.g || "Beat "+(i+1)) : "Slide "+(i+2);
+    const tPh = key==="beats" ? "On-screen text / what happens" : "Headline";
+    const dPh = key==="beats" ? "Voiceover or notes (optional)" : "Body text (optional)";
+    return `<div class="item">
+      <div class="item-top"><span class="lbl">${esc(lbl)}</span>
+        <button data-a="li-move" data-li="${key}" data-i="${i}" data-v="-1" ${i===0?"disabled":""} aria-label="Move up">↑</button>
+        <button data-a="li-move" data-li="${key}" data-i="${i}" data-v="1" ${i===n-1?"disabled":""} aria-label="Move down">↓</button>
+        <button data-a="li-del" data-li="${key}" data-i="${i}" aria-label="Remove">✕</button></div>
+      <input type="text" data-li="${key}" data-i="${i}" data-k="t" value="${esc(it.t)}" placeholder="${tPh}">
+      <textarea data-li="${key}" data-i="${i}" data-k="d" placeholder="${dPh}">${esc(it.d)}</textarea>
+    </div>`;
+  }).join("");
+}
+const hookPicker = () => S.hooks.length ? `<details class="more"><summary>Hook bank</summary>
+  <div class="pick">${S.hooks.map((h,i)=>`<button data-a="hook-pick" data-i="${i}">${esc(h)}</button>`).join("")}</div></details>` : "";
+
+function contentHtml(p){
+  if(p.format==="reel") return `<h3>Reel</h3>
+    <label class="f">Opening on-screen text (the hook)</label>
+    <textarea data-f="hook" rows="2" placeholder="What viewers read in the first second">${esc(p.hook)}</textarea>
+    ${hookPicker()}
+    <label class="f">Audio</label><input type="text" data-f="audio" value="${esc(p.audio)}" placeholder="Trending sound name or link">
+    <label class="f">Beats</label>${listItems(p,"beats")}
+    <div class="row" style="margin-top:0"><button class="ghost tiny" data-a="li-add" data-li="beats">+ Beat</button><span class="grow"></span>
+      <button class="ghost tiny" data-a="copy" data-what="script" data-id="${p.id}">Copy script</button></div>
+    <label class="f">Footage / visual notes</label><textarea data-f="visual" rows="2" placeholder="e.g. sunrise B-roll, journaling hands, soft piano">${esc(p.visual)}</textarea>`;
+  if(p.format==="carousel") return `<h3>Carousel</h3>
+    <label class="f">Slide 1: cover</label>
+    <textarea data-f="hook" rows="2" placeholder="The headline that makes people swipe">${esc(p.hook)}</textarea>
+    ${hookPicker()}
+    <label class="f">Slides</label>${listItems(p,"slides")}
+    <div class="row" style="margin-top:0"><button class="ghost tiny" data-a="li-add" data-li="slides" ${p.slides.length+1>=CAROUSEL_MAX?"disabled":""}>+ Slide</button>
+      <span class="small">${p.slides.length+1} of ${CAROUSEL_MAX} max</span><span class="grow"></span>
+      <button class="ghost tiny" data-a="copy" data-what="slides" data-id="${p.id}">Copy slides</button></div>
+    <label class="f">Design notes</label><textarea data-f="visual" rows="2" placeholder="Colors, fonts, background images">${esc(p.visual)}</textarea>`;
+  return `<h3>Image post</h3>
+    <label class="f">Text on the image</label>
+    <textarea data-f="hook" rows="3" placeholder="The affirmation or quote">${esc(p.hook)}</textarea>
+    ${hookPicker()}
+    <label class="f">Design notes</label><textarea data-f="visual" rows="2" placeholder="Background, font, colors">${esc(p.visual)}</textarea>`;
+}
+
+function renderEditor(){
+  const p = cur(); if(!p){ closeEditor(); return; }
+  const plats = activePlats(p);
+  el("sheet").innerHTML = `
+  <div class="sh-top"><div class="in">
+    <button class="ghost tiny" data-a="close">← Done</button>
+    <div class="ttl" id="sh-title">${esc(titleOf(p))}</div>
+    <button class="ghost tiny" data-a="dup" data-id="${p.id}">Duplicate</button>
+    <button class="ghost tiny danger" data-a="del" data-id="${p.id}">Delete</button>
+  </div></div>
+  <div class="sh-body wrap">
+    <div class="panel">
+      <label class="f">Format</label>
+      <div class="seg">${FORMATS.map(([k,n])=>`<button class="${p.format===k?"on":""}" data-a="fmt" data-v="${k}">${n}</button>`).join("")}</div>
+      <label class="f">Working title</label>
+      <input type="text" data-f="title" value="${esc(p.title)}" placeholder="Only you see this">
+      <label class="f">Pillar</label>
+      <select data-f="pillar">${pillarOpts(p.pillar, "No pillar")}</select>
+      <label class="f">Stage</label>
+      <div class="seg">${[["draft","Draft"],["ready","Ready"]].map(([k,n])=>`<button class="${p.stage===k?"on":""}" data-a="stage" data-v="${k}">${n}</button>`).join("")}</div>
+      <div class="two">
+        <div><label class="f">Post date</label><input type="date" data-f="date" value="${esc(p.date)}"></div>
+        <div><label class="f">Time</label><input type="time" data-f="time" value="${esc(p.time)}"></div>
+      </div>
+      <label class="f">Post to</label>
+      <div class="seg">${PLATS.map(([k,n])=>`<button class="${p.plats[k]?"on":""}" data-a="plat" data-v="${k}">${p.plats[k]?"✓ ":""}${n}</button>`).join("")}</div>
+    </div>
+
+    <div class="panel">${contentHtml(p)}</div>
+
+    <div class="panel">
+      <h3>Caption</h3>
+      <textarea data-f="caption" rows="5" placeholder="Write the caption. The call to action and hashtags are added when you copy.">${esc(p.caption)}</textarea>
+      <div class="count" id="cap-n"></div>
+      <label class="f">Call to action</label>
+      <input type="text" data-f="cta" value="${esc(p.cta)}" placeholder="e.g. Save this for later ✨">
+      ${S.ctas.length?`<div class="pick">${S.ctas.map((c,i)=>`<button data-a="cta-pick" data-i="${i}">${esc(c)}</button>`).join("")}</div>`:""}
+      <label class="f">Hashtag set</label>
+      <select data-f="tagSet"><option value="">None</option>${S.tagSets.map(t=>`<option value="${t.id}" ${t.id===p.tagSet?"selected":""}>${esc(t.name)}</option>`).join("")}</select>
+      <label class="f">Extra hashtags</label>
+      <input type="text" data-f="extraTags" value="${esc(p.extraTags)}" placeholder="#oneoff #tags">
+      <div class="tagprev" id="tag-prev"></div>
+      <details class="more" ${(p.fbCaption||"").trim()?"open":""}><summary>Use a different caption on Facebook</summary>
+        <textarea data-f="fbCaption" rows="4" placeholder="Leave empty to use the same caption" style="margin-top:8px">${esc(p.fbCaption)}</textarea>
+      </details>
+    </div>
+
+    <div class="panel" id="post-panel">
+      <h3>Post it</h3>
+      ${plats.length ? plats.map(([k,n])=>`
+        <div class="plat-h"><span class="pb ${k} posted"><span>${k.toUpperCase()}</span></span>${n}</div>
+        <div class="row" style="margin-top:0">
+          <button class="ghost" data-a="copy" data-what="${k}" data-id="${p.id}">Copy caption</button>
+          <button class="${p.posted[k]?"done":""}" data-a="posted" data-pl="${k}" data-id="${p.id}">${p.posted[k]?"✓ Posted "+nice(ymd(new Date(p.posted[k]))):"Mark posted"}</button>
+        </div>
+        ${p.posted[k]?`<input type="url" data-link="${k}" value="${esc(p.links[k])}" placeholder="Paste the post link (optional)" style="margin-top:8px">`:""}`).join("")
+        : `<p class="small">Pick at least one platform above.</p>`}
+    </div>
+
+    ${anyPosted(p) ? `<div class="panel">
+      <h3>Results</h3><p class="small" style="margin-bottom:8px">Check the post's insights after 2–3 days and log them here. The Today tab uses them to show what's working.</p>
+      ${PLATS.filter(([k])=>p.posted[k]).map(([k,n])=>`<div class="plat-h">${n}</div>
+        <div class="statgrid">${METRICS.map(([m,mn])=>`<div><label class="f">${mn}</label>
+          <input type="number" min="0" inputmode="numeric" data-stat="${k}.${m}" value="${esc(p.stats[k][m])}"></div>`).join("")}</div>`).join("")}
+    </div>` : ""}
+  </div>`;
+  updateCounters();
+}
+
+function updateCounters(){
+  const p = cur(); if(!p) return;
+  const c = el("cap-n");
+  if(c){
+    const n = textFor(p,"ig").length;
+    c.textContent = n.toLocaleString()+" / "+IG_CAPTION_MAX.toLocaleString()+" characters on Instagram (with call to action and tags)";
+    c.classList.toggle("warn", n > IG_CAPTION_MAX);
   }
-  sparkCurrent = sparkQueue.shift() || "";
-  const v = el("spark-pillar").value;
-  el("spark-mode").textContent = MODES[v] || "";
-  const box = el("spark-q");
-  box.textContent = sparkCurrent; box.classList.remove("idle");
-  el("spark-draw").textContent = "Another";
-  const use = el("spark-use"); use.disabled = false; use.style.opacity = "";
+  const tp = el("tag-prev");
+  if(tp){
+    const tags = tagsOf(p), lim = num(S.brand.igTags);
+    tp.innerHTML = tags.length ? esc(tags.join(" ")) +
+      `<div class="count ${tags.length>lim?"warn":""}">${tags.length} tags${tags.length>lim?` — only the first ${lim} go on Instagram`:""}</div>` : "";
+  }
+  const t = el("sh-title"); if(t) t.textContent = titleOf(p);
 }
-el("spark-draw").addEventListener("click", drawSpark);
-el("spark-pillar").addEventListener("change", ()=>{ sparkQueue = []; sparkCurrent = ""; drawSpark(); });
-el("spark-use").addEventListener("click", ()=>{
-  if(!sparkCurrent) return;
-  el("i-topic").value = sparkCurrent;
-  const pv = el("spark-pillar").value;
-  if(pv !== "all") el("i-pillar").value = pv;
-  el("i-topic").focus();
-  el("i-topic").scrollIntoView({behavior:"smooth", block:"center"});
-});
+function touch(p){ p.updated = Date.now(); save(); }
 
-/* ---- delegated events ---- */
-document.body.addEventListener("click", e=>{
-  const b = e.target.closest("[data-act]"); if(!b || b.tagName==="SELECT" || b.tagName==="TEXTAREA") return;
-  const i = S.ideas.find(x=>x.id===b.dataset.id); if(!i && b.dataset.act!=="check") return;
-  const a = b.dataset.act;
-  if(a==="to-batch"){
-    if(!topicOf(i)){
-      const f = b.closest(".idea").querySelector('[data-act="topicbox"]');
-      if(f) f.focus();
-      return;
+/* ============================================================
+   EVENTS
+   ============================================================ */
+function newPost(opts){
+  const p = blankPost(opts.format);
+  if(opts.date){ p.date = opts.date; p.time = S.brand.time||""; }
+  if(opts.pillar) p.pillar = opts.pillar;
+  if(opts.title) p.title = opts.title;
+  if(S.tagSets[0]) p.tagSet = S.tagSets[0].id;
+  if(p.format!=="reel") p.beats = blankPost("reel").beats;
+  S.posts.push(p); save();
+  return p;
+}
+
+document.addEventListener("click", e=>{
+  const b = e.target.closest("[data-a]"); if(!b) return;
+  const a = b.dataset.a, id = b.dataset.id, v = b.dataset.v;
+  const p = id ? getPost(id) : cur();
+  let rerender = true;
+
+  switch(a){
+    case "tab": closeEditor(); view = v; window.scrollTo(0,0); break;
+    case "goplan": {
+      const days = Math.round((parseYmd(b.dataset.date) - weekStart(0)) / 864e5);
+      weekOff = Math.floor(days / 7); view = "plan"; window.scrollTo(0,0); break;
     }
-    i.stage="batch";
+    case "pfgo": PF.stage = v; PF.format = "all"; view = "posts"; window.scrollTo(0,0); break;
+    case "pf": PF[b.dataset.k] = v; break;
+    case "ideapf": ideaPillar = v; break;
+    case "wk": weekOff = v==="0" ? 0 : weekOff + Number(v); break;
+
+    case "new": { const np = newPost({format:b.dataset.fmt||"reel", date:b.dataset.date}); render(); openEditor(np.id); return; }
+    case "open": openEditor(id); return;
+    case "close": closeEditor(); break;
+
+    case "idea-add": {
+      const t = el("idea-text").value.trim(); if(!t){ toast("Type an idea first"); return; }
+      S.ideas.unshift({id:uid(), text:t, format:el("idea-fmt").value, pillar:el("idea-pillar").value, created:Date.now()});
+      save(); toast("Idea saved"); break;
+    }
+    case "idea-del": S.ideas = S.ideas.filter(i=>i.id!==id); save(); break;
+    case "idea-make": {
+      const i = S.ideas.find(x=>x.id===id); if(!i) return;
+      const np = newPost({format:i.format, pillar:i.pillar, title:i.text});
+      S.ideas = S.ideas.filter(x=>x.id!==id); save(); render(); openEditor(np.id); return;
+    }
+    case "spark-next": sparkIdx = (sparkIdx + 1 + Math.floor(Math.random()*(SPARKS.length-1))) % SPARKS.length; break;
+    case "spark-save":
+      S.ideas.unshift({id:uid(), text:SPARKS[sparkIdx], format:"reel", pillar:"", created:Date.now()});
+      sparkIdx = (sparkIdx+1) % SPARKS.length; save(); toast("Idea saved"); break;
+
+    case "fmt": if(!p) return; p.format = v; touch(p); renderEditor(); return;
+    case "stage": if(!p) return; p.stage = v; touch(p); renderEditor(); return;
+    case "plat": if(!p) return;
+      p.plats[v] = !p.plats[v]; touch(p); renderEditor(); return;
+    case "posted": if(!p) return;
+      p.posted[b.dataset.pl] = p.posted[b.dataset.pl] ? 0 : Date.now();
+      if(p.posted[b.dataset.pl] && !p.date) p.date = today();
+      touch(p); if(editing) renderEditor(); break;
+    case "copy": if(!p) return; {
+      const w = b.dataset.what;
+      const txt = w==="script" ? scriptText(p) : w==="slides" ? slidesText(p) : textFor(p, w);
+      copyText(txt, b.closest(".row")||b); return;
+    }
+    case "hook-pick": if(!p) return; p.hook = S.hooks[+b.dataset.i]||""; touch(p); renderEditor(); return;
+    case "cta-pick": if(!p) return; p.cta = S.ctas[+b.dataset.i]||""; touch(p); renderEditor(); return;
+    case "li-add": if(!p) return; {
+      const k = b.dataset.li; p[k].push({id:uid(), g: k==="beats" ? "Beat "+(p[k].length+1) : "", t:"", d:""});
+      touch(p); renderEditor(); return;
+    }
+    case "li-del": if(!p) return; p[b.dataset.li].splice(+b.dataset.i,1); touch(p); renderEditor(); return;
+    case "li-move": if(!p) return; {
+      const L = p[b.dataset.li], i = +b.dataset.i, j = i + Number(v);
+      if(j<0 || j>=L.length) return; [L[i],L[j]] = [L[j],L[i]]; touch(p); renderEditor(); return;
+    }
+    case "dup": if(!p) return; {
+      const c = JSON.parse(JSON.stringify(p));
+      Object.assign(c, {id:uid(), title:(p.title||titleOf(p))+" (copy)", date:"", time:"", stage:"draft",
+        posted:{ig:0,fb:0}, links:{ig:"",fb:""}, stats:{ig:{},fb:{}}, created:Date.now(), updated:Date.now()});
+      S.posts.push(c); save(); render(); openEditor(c.id); toast("Duplicated — set a new date"); return;
+    }
+    case "del": if(!p) return;
+      if(!confirm("Delete this post? This can't be undone.")) return;
+      S.posts = S.posts.filter(x=>x.id!==p.id); save(); closeEditor(); break;
+
+    case "ts-add": S.tagSets.push({id:uid(), name:"New set", tags:""}); save(); break;
+    case "ts-del":
+      if(!confirm("Delete this hashtag set?")) return;
+      S.tagSets = S.tagSets.filter(t=>t.id!==id); save(); break;
+    case "export": {
+      const blob = new Blob([JSON.stringify(S,null,2)], {type:"application/json"});
+      const u = URL.createObjectURL(blob), l = document.createElement("a");
+      l.href = u; l.download = "theme-page-studio-"+today()+".json"; document.body.appendChild(l); l.click();
+      setTimeout(()=>{ URL.revokeObjectURL(u); l.remove(); }, 500); return;
+    }
+    case "copy-backup": copyText(JSON.stringify(S), b.closest(".row")); return;
+    default: rerender = false;
   }
-  else if(a==="to-ready"){ if(!isReady(i)) return; i.stage="ready"; }
-  else if(a==="to-capture") i.stage="capture";
-  else if(a==="to-ship") i.stage="ship";
-  else if(a==="back") i.stage="batch";
-  else if(a==="posted"){ i.stage="posted"; if(!i.posted){ const d=new Date();
-    i.posted = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); } }
-  else if(a==="del"){
-    trash = {idea:i, at:S.ideas.indexOf(i)};
-    S.ideas = S.ideas.filter(x=>x.id!==i.id);
-    el("toast-msg").textContent = "Deleted \u201c"+topicOf(i).slice(0,32)+"\u201d";
-    el("toast").classList.add("show");
-    clearTimeout(trashTimer);
-    trashTimer = setTimeout(()=>{ trash=null; el("toast").classList.remove("show"); }, 12000);
-  }
-  else if(a==="beats"){ open[i.id]=!open[i.id]; render(); return; }
-  else if(a==="cap"){ copyText((i.caption||"").trim(), el("cap-"+i.id), b.closest(".row")); return; }
-  else if(a==="tp"){ copyText(tprompt(i), el("tp-"+i.id), b.closest(".row")); return; }
-  else if(a==="beatadd"){ i.beats=beatsOf(i); i.beats.push({id:newBeatId(),g:"",t:"",d:""}); open[i.id]=true; save(); render();
-    const f=document.querySelector(`[data-act="beattrig"][data-id="${i.id}"][data-k="${i.beats.length-1}"]`); if(f) f.focus(); return; }
-  else if(a==="beatfmt"){ i.beats = GUIDE.map((g,x)=>({id:newBeatId(),g:x===0?"":g[0],t:"",d:""})); open[i.id]=true; save(); render(); return; }
-  else if(a==="beatdel"){
-    i.beats=beatsOf(i); const [removed]=i.beats.splice(+b.dataset.k,1);
-    if(removed) (i.shots||[]).forEach(s=>{ if(s.beatId===removed.id) s.beatId=""; });
-    save(); render(); return;
-  }
-  else if(a==="beatup"||a==="beatdown"){
-    i.beats=beatsOf(i); const k=+b.dataset.k, j=a==="beatup"?k-1:k+1;
-    if(j<0||j>=i.beats.length) return;
-    [i.beats[k],i.beats[j]]=[i.beats[j],i.beats[k]]; save(); render(); return;
-  }
-  else if(a==="shotadd"){
-    const inp = b.previousElementSibling; const v = (inp?inp.value:"").trim(); if(!v) return;
-    i.shots = i.shots||[]; i.shots.push({t:v,done:false,footage:"",beatId:b.dataset.beat||""}); open[i.id]=true; save(); render(); return;
-  }
-  else if(a==="shotclear"){ i.shots = (i.shots||[]).filter(s=>!s.done); save(); render(); return; }
-  else return;
-  save(); render();
+  if(rerender) render();
 });
-document.body.addEventListener("change", e=>{
-  const t = e.target, a = t.dataset.act; if(!a) return;
-  const i = S.ideas.find(x=>x.id===t.dataset.id);
-  if(a==="cat"){ i.cat=t.value; }
-  else if(a==="shotfootage"){ i.shots[t.dataset.k].footage = t.value; }
-  else if(a==="shotbeat"){ i.shots[t.dataset.k].beatId = t.value; }
-  else if(a==="check"){ i.checks[t.dataset.k]=t.checked; }
-  else if(a==="shotdone"){ i.shots[t.dataset.k].done = t.checked; }
-  else if(a==="pdate"){ i.posted = t.value; }
-  else return;
-  save(); render();
-});
-document.body.addEventListener("input", e=>{
+
+document.addEventListener("input", e=>{
   const t = e.target;
-  if(t.dataset.act==="captionbox"){
-    const i = S.ideas.find(x=>x.id===t.dataset.id); i.caption = t.value; save();
-    const cb = t.closest(".idea").querySelector('[data-act="cap"]');
-    if(cb){ const ok = !!t.value.trim(); cb.disabled = !ok;
-      cb.style.opacity = ok?"":".35"; cb.style.cursor = ok?"":"default"; }
+  if(t.type==="checkbox" || t.type==="file") return;
+  const p = cur();
+  if(t.id==="post-q"){
+    PF.q = t.value; const pos = t.selectionStart; renderPosts();
+    const n = el("post-q"); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(_){}
     return;
   }
-  if(t.dataset.act==="topicbox"){
-    const i = S.ideas.find(x=>x.id===t.dataset.id); i.topic = t.value; save(); return;
-  }
-  if(t.dataset.act==="notebox"){
-    const i = S.ideas.find(x=>x.id===t.dataset.id); i.note = t.value; save(); return;
-  }
-  if(t.dataset.act==="beatdetail"){
-    const i = S.ideas.find(x=>x.id===t.dataset.id); beatsOf(i)[+t.dataset.k].d = t.value; save(); return;
-  }
-  if(t.dataset.act==="beattrig"){
-    const i = S.ideas.find(x=>x.id===t.dataset.id); beatsOf(i)[+t.dataset.k].t = t.value; save();
-    const cardEl = t.closest(".idea");
-    const strip = cardEl.querySelector(".strip");
-    const n = done(i); [...strip.children].forEach((s,x)=>s.classList.toggle("done",x<n));
-    const btn = cardEl.querySelector('[data-act="beats"]');
-    if(btn) btn.textContent = "Hide beat sheet "+n+"/"+beatsOf(i).length+((i.shots||[]).length?" · "+i.shots.length+" shots":"");
-    refreshGate(i, cardEl);
+  if(p && t.dataset.f){ p[t.dataset.f] = t.value; touch(p); updateCounters(); return; }
+  if(p && t.dataset.li){ const it = p[t.dataset.li][+t.dataset.i]; if(it){ it[t.dataset.k] = t.value; touch(p); } return; }
+  if(p && t.dataset.stat){ const [pl,m] = t.dataset.stat.split("."); p.stats[pl][m] = t.value==="" ? "" : Number(t.value); touch(p); return; }
+  if(p && t.dataset.link){ p.links[t.dataset.link] = t.value; touch(p); return; }
+  if(t.dataset.kit){ S.brand[t.dataset.kit] = t.value; save(); if(t.dataset.kit==="name") el("hdr-name").textContent = t.value.trim()||"Theme Page Studio"; return; }
+  if(t.dataset.kitn){ S.brand[t.dataset.kitn] = t.value==="" ? "" : Number(t.value); save(); return; }
+  if(t.dataset.lines){ S[t.dataset.lines] = t.value.split("\n").map(s=>s.trim()).filter(Boolean); save(); return; }
+  if(t.dataset.ts){
+    const set = S.tagSets.find(x=>x.id===t.dataset.ts); if(!set) return;
+    set[t.dataset.k] = t.value; save();
+    if(t.dataset.k==="tags"){ const c = el("tsn-"+set.id); if(c) c.textContent = tagCount(t.value)+" tags"; }
   }
 });
-document.body.addEventListener("keydown", e=>{
-  if(e.key==="Enter" && e.target.dataset && e.target.dataset.act==="shotenter"){
-    e.preventDefault();
-    const i = S.ideas.find(x=>x.id===e.target.dataset.id); if(!i) return;
-    const v = e.target.value.trim(); if(!v) return;
-    i.shots = i.shots||[]; i.shots.push({t:v,done:false,footage:"",beatId:e.target.dataset.beat||""}); open[i.id]=true; save(); render();
-  }
+
+document.addEventListener("change", e=>{
+  if(e.target.id!=="import-file") return;
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(!confirm("Replace everything in the app with this backup?")) return;
+      const rev = S.rev||0; S = normalize(d); S.rev = rev; save(); render(); toast("Backup restored");
+    }catch(err){ toast("That file isn't a valid backup"); }
+  };
+  r.readAsText(f);
 });
-el("filter").onchange = e => { filter = e.target.value; render(); };
-el("q").oninput = e => { q = e.target.value.trim().toLowerCase(); render(); };
-el("save-grade").onclick = ()=>{ S.grading = el("grading").value; save();
-  el("grade-saved").textContent="saved"; setTimeout(()=>el("grade-saved").textContent="",1600); };
-el("save-review").onclick = ()=>{ S.review = el("review").value; save(); };
 
-el("export").onclick = async ()=>{
-  const line = i => `- ${topicOf(i)}\n    pillar: ${i.cat}\n`+
-    ((i.shots||[]).length?`    shots:\n`+i.shots.map(s=>`      [${s.done?"x":" "}] ${s.t}${ftLabel(s.footage)?" ("+ftLabel(s.footage)+")":""}`).join("\n")+"\n":"")+
-    (beatsOf(i).length?`    BEAT SHEET:\n`+beatsOf(i).map((b,x)=>
-      `      ${String(x+1).padStart(2,"0")}${glabel(b,x)?" "+glabel(b,x):""} — ${b.t||"..."}`+
-      ((b.d||"").trim()?`\n           detail: ${b.d}`:"")).join("\n"):`    BEAT SHEET: (empty)`)+
-    ((i.caption||"").trim()?`\n    CAPTION: ${i.caption}`:"")+
-    (i.posted?`\n    posted: ${i.posted}`:"");
-  const sec = (t,s) => `\n== ${t} ==\n`+(S.ideas.filter(i=>i.stage===s).map(line).join("\n\n")||"(empty)")+"\n";
-  const txt = `CAPTURE / BATCH / SHIP\n`+sec("CAPTURE","capture")+sec("BATCH","batch")+
-    sec("READY TO FILM","ready")+sec("SHIP","ship")+sec("POSTED","posted")+`\n== GRADING ==\n${S.grading}\n\n== LOOK-BACK ==\n${S.review}`;
-  try{ await navigator.clipboard.writeText(txt); el("export-msg").textContent="copied"; }
-  catch(err){ el("export-msg").textContent="press and hold to copy from the box below";
-    const ta=document.createElement("textarea"); ta.value=txt; ta.style.cssText="width:100%;min-height:200px;margin-top:10px";
-    el("export").parentElement.after(ta); }
-  setTimeout(()=>el("export-msg").textContent="",2500);
-};
-
-el("mk-backup").onclick = ()=>{ el("backup").value = JSON.stringify(S); };
-el("restore").onclick = ()=>{
-  try{ const d = JSON.parse(el("backup").value);
-    if(!d.ideas) throw 0;
-    S = migrate(d); save(); render(); el("backup-msg").textContent="restored";
-  }catch(e){ el("backup-msg").textContent="that text isn't a valid backup"; }
-  setTimeout(()=>el("backup-msg").textContent="",2500);
-};
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && editing){ closeEditor(); render(); } });
 
 load();
+
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 
 <!-- ============================================================
      SYNC — settings live in firebase-config.js, NOT in this file.
-     That way this file can be replaced without touching your keys.
+     Data is stored in the same Firestore document as the old app
+     (pipelines/{uid}) but under its own "studio" field, written with
+     merge so the old app's "data" field is left untouched.
      ============================================================ -->
 <script type="module">
-const FIREBASE_CONFIG = window.FIREBASE_CONFIG || {};
-
+const CFG = window.FIREBASE_CONFIG || {};
 const B = window.BRIDGE;
 const el = id => document.getElementById(id);
 const show = (id,on) => { const e = el(id); if(e) e.style.display = on ? "block" : "none"; };
 
-/* Work out precisely what's wrong so the panel can say so. */
 let why = "";
 if(!window.FIREBASE_CONFIG){
-  why = "firebase-config.js didn't load, or it doesn't start with  window.FIREBASE_CONFIG =  "
-      + "The Firebase console gives you  const firebaseConfig = {...}  — that form won't work here. "
-      + "Also check the file sits next to index.html and is named exactly firebase-config.js.";
-} else {
-  const need = ["apiKey","authDomain","projectId","appId"];
-  const missing = need.filter(k => !FIREBASE_CONFIG[k]);
-  const left = need.filter(k => String(FIREBASE_CONFIG[k]||"").includes("PASTE_YOURS"));
+  why = "firebase-config.js didn't load. It must sit next to index.html and start with  window.FIREBASE_CONFIG = {...}";
+}else{
+  const missing = ["apiKey","authDomain","projectId","appId"].filter(k=>!CFG[k]);
   if(missing.length) why = "firebase-config.js is missing: " + missing.join(", ");
-  else if(left.length) why = "Still says PASTE_YOURS in: " + left.join(", ");
 }
+
 if(why){
-  B.setStatus("Sync off — see below", "bad");
-  show("sync-setup", true);
-  const box = el("sync-why"); if(box) box.textContent = why;
-} else {
-  let initializeApp, auth_, fs_;
+  B.setStatus("Sync is off. This device only.", "bad");
+  show("sync-setup", true); el("sync-why").textContent = why;
+}else{
+  let mods;
   try{
-    const mods = await Promise.all([
+    mods = await Promise.all([
       import("https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js"),
       import("https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js")
     ]);
-    initializeApp = mods[0].initializeApp; auth_ = mods[1]; fs_ = mods[2];
   }catch(e){
-    B.setStatus("Offline — saved on this device, will sync next time you open it online", "bad");
+    B.setStatus("Offline. Saved on this device, will sync when you're back online.", "bad");
     throw e;
   }
-  const { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-          createUserWithEmailAndPassword, signOut, setPersistence,
-          browserLocalPersistence } = auth_;
-  const { getFirestore, doc, onSnapshot, setDoc, getDoc } = fs_;
+  const [{initializeApp}, A, F] = mods;
+  const app = initializeApp(CFG), auth = A.getAuth(app), db = F.getFirestore(app);
+  await A.setPersistence(auth, A.browserLocalPersistence).catch(()=>{});
 
-  const app  = initializeApp(FIREBASE_CONFIG);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-  await setPersistence(auth, browserLocalPersistence).catch(()=>{});
-
-  let ref = null, stop = null, firstSnap = true, pending = null, pushTimer = null;
-
-  const msg = (txt,ms=3000) => { const e=el("sync-msg"); if(!e) return;
-    e.textContent = txt; if(ms) setTimeout(()=>{ if(e.textContent===txt) e.textContent=""; }, ms); };
-
-  const stamp = () => { const d=new Date();
-    return d.getHours()%12 + ":" + String(d.getMinutes()).padStart(2,"0") + (d.getHours()<12?"am":"pm"); };
+  let ref = null, stop = null, first = true, pending = null, timer = null;
+  const stamp = () => { const d = new Date(); return (d.getHours()%12||12)+":"+String(d.getMinutes()).padStart(2,"0")+(d.getHours()<12?"am":"pm"); };
+  const msg = (t,ms=3000) => { const e = el("sync-msg"); e.textContent = t; if(ms) setTimeout(()=>{ if(e.textContent===t) e.textContent=""; }, ms); };
 
   async function push(){
     if(!ref) return;
     const st = B.getState();
     try{
-      await setDoc(ref, { data: JSON.stringify(st), rev: st.rev||0, at: Date.now() });
+      await F.setDoc(ref, {studio:JSON.stringify(st), studioRev:st.rev||0, studioAt:Date.now()}, {merge:true});
       B.setStatus("Synced "+stamp(), "good");
-    }catch(e){ B.setStatus("Sync failed — still saved on this device", "bad"); }
+    }catch(e){ B.setStatus("Sync failed. Still saved on this device.", "bad"); }
   }
+  B.onLocalChange = () => { if(!ref) return; B.setStatus("Syncing…"); clearTimeout(timer); timer = setTimeout(push, 1200); };
 
-  B.onLocalChange = () => {
-    if(!ref) return;
-    B.setStatus("Syncing…");
-    clearTimeout(pushTimer); pushTimer = setTimeout(push, 1200);
-  };
-
-  function attach(uid){
-    ref = doc(db, "pipelines", uid);
-    firstSnap = true;
-    stop = onSnapshot(ref, snap => {
-      const local = B.getState(), lrev = B.getRev();
-      if(!snap.exists()){ push(); return; }
-      const d = snap.data();
-      let remote; try{ remote = JSON.parse(d.data); }catch(e){ return; }
-      const rrev = d.rev || 0;
-
-      if(firstSnap){
-        firstSnap = false;
-        const lc = (local.ideas||[]).length, rc = (remote.ideas||[]).length;
-        const differs = JSON.stringify(local.ideas||[]) !== JSON.stringify(remote.ideas||[]);
-        if(lc && rc && differs){
+  function attach(u){
+    ref = F.doc(db, "pipelines", u); first = true;
+    stop = F.onSnapshot(ref, snap => {
+      const d = snap.exists() ? snap.data() : {};
+      if(!d.studio){ push(); first = false; return; }
+      let remote; try{ remote = JSON.parse(d.studio); }catch(e){ return; }
+      const rrev = d.studioRev||0, local = B.getState(), lrev = B.getRev();
+      if(first){
+        first = false;
+        const differs = JSON.stringify([local.posts,local.ideas]) !== JSON.stringify([remote.posts,remote.ideas]);
+        if(B.hasContent(local) && B.hasContent(remote) && differs){
           pending = remote; pending.rev = rrev;
-          el("sync-clash-txt").textContent =
-            "This device has "+lc+(lc===1?" card":" cards")+". The synced copy has "+rc+
-            (rc===1?" card":" cards")+". Pick which one to keep — the other is replaced.";
-          show("sync-clash", true);
-          B.setStatus("Waiting — two copies to reconcile", "bad");
+          const n = s => (s.posts||[]).length+" posts, "+(s.ideas||[]).length+" ideas";
+          el("sync-clash-txt").textContent = "This device has "+n(local)+". The synced copy has "+n(remote)+". Pick one to keep. The other is replaced.";
+          show("sync-clash", true); B.setStatus("Two different copies. Pick one below.", "bad");
           return;
         }
+        if(!B.hasContent(local) && B.hasContent(remote)){ remote.rev = rrev; B.applyRemote(remote); B.setStatus("Synced "+stamp(), "good"); return; }
       }
-      if(rrev > lrev){ B.applyRemote(remote); B.setStatus("Updated from your other device "+stamp(), "good"); }
-      else if(lrev > rrev){ push(); }
+      if(pending) return;
+      if(rrev > lrev){ remote.rev = rrev; B.applyRemote(remote); B.setStatus("Updated from another device "+stamp(), "good"); }
+      else if(lrev > rrev) push();
       else B.setStatus("Synced "+stamp(), "good");
-    }, () => B.setStatus("Sync offline — still saved on this device", "bad"));
+    }, () => B.setStatus("Sync offline. Still saved on this device.", "bad"));
   }
 
-  el("clash-local").onclick = () => { pending=null; show("sync-clash",false); push(); };
-  el("clash-remote").onclick = () => {
-    if(pending){ B.applyRemote(pending); pending=null; }
-    show("sync-clash",false); B.setStatus("Synced "+stamp(), "good");
-  };
+  el("clash-local").onclick = () => { pending = null; show("sync-clash", false); push(); };
+  el("clash-remote").onclick = () => { if(pending){ B.applyRemote(pending); pending = null; } show("sync-clash", false); B.setStatus("Synced "+stamp(), "good"); };
   el("sync-push").onclick = () => push();
 
-  onAuthStateChanged(auth, user => {
-    if(stop){ stop(); stop=null; }
+  A.onAuthStateChanged(auth, user => {
+    if(stop){ stop(); stop = null; }
     show("sync-signin", !user); show("sync-on", !!user); show("sync-clash", false);
-    if(user){ B.setStatus("Connecting…"); attach(user.uid); }
-    else { ref=null; B.setStatus("Signed out — this device only"); }
+    if(user){ B.setStatus("Connecting as "+(user.email||"you")+"…"); attach(user.uid); }
+    else { ref = null; B.setStatus("Signed out. Saving on this device only."); }
   });
 
   const creds = () => [el("sync-email").value.trim(), el("sync-pass").value];
-  const fail = e => msg((e.code||"").replace("auth/","").replace(/-/g," ") || "sign-in failed", 5000);
-
+  const fail = e => msg((e.code||"").replace("auth/","").replace(/-/g," ") || "Sign-in failed", 5000);
   el("sync-in").onclick = async () => {
-    const [e,pw] = creds(); if(!e||!pw) return msg("email and password needed");
-    msg("signing in…", 0);
-    try{ await signInWithEmailAndPassword(auth,e,pw); msg("signed in"); el("sync-pass").value=""; }
-    catch(err){ fail(err); }
+    const [e,pw] = creds(); if(!e||!pw) return msg("Email and password needed");
+    msg("Signing in…", 0);
+    try{ await A.signInWithEmailAndPassword(auth,e,pw); msg("Signed in"); el("sync-pass").value = ""; }catch(err){ fail(err); }
   };
   el("sync-new").onclick = async () => {
-    const [e,pw] = creds(); if(!e||pw.length<6) return msg("password needs 6+ characters");
-    msg("creating…", 0);
-    try{ await createUserWithEmailAndPassword(auth,e,pw); msg("account created"); el("sync-pass").value=""; }
-    catch(err){ fail(err); }
+    const [e,pw] = creds(); if(!e||pw.length<6) return msg("Password needs 6+ characters");
+    msg("Creating…", 0);
+    try{ await A.createUserWithEmailAndPassword(auth,e,pw); msg("Account created"); el("sync-pass").value = ""; }catch(err){ fail(err); }
   };
-  el("sync-out").onclick = () => signOut(auth);
+  el("sync-out").onclick = () => A.signOut(auth);
 }
 </script>
 </body>
