@@ -323,12 +323,7 @@ function defaults(){
       "Comment 'MINE' to claim it 🙏",
       "Follow for daily manifestation reminders 🌙"
     ],
-    tagSets:[
-      {id:uid(), name:"Core", tags:"#lawofattraction #manifestation #affirmations #abundance #manifest"},
-      {id:uid(), name:"Money", tags:"#moneymindset #abundancemindset #manifestmoney #wealthmindset #lawofattraction"},
-      {id:uid(), name:"Love", tags:"#selflove #manifestlove #loveaffirmations #lawofattraction #healing"},
-      {id:uid(), name:"Spiritual", tags:"#universe #synchronicity #angelnumbers #highvibes #spiritualawakening"}
-    ],
+    tagSets: DEFAULT_TAGSETS.map(([name,tags])=>({id:uid(), name, tags})),
     postiz:{ ig:null, fb:null, channels:[] },
     ideas:[], posts:[]
   };
@@ -347,6 +342,37 @@ function blankPost(format){
     created:Date.now(), updated:Date.now()
   };
 }
+
+/* One hashtag set per pillar, named the same, so picking a pillar picks its set. */
+const DEFAULT_TAGSETS = [
+  ["Signs, timing & trust",     "#lawofattraction #manifestation #divinetiming #signsfromtheuniverse #trusttheprocess"],
+  ["Mindset & self-concept",    "#lawofattraction #manifestation #manifesting #selfconcept #mindsetshift"],
+  ["Techniques & rituals",      "#lawofattraction #manifestation #scripting #manifestingtips #visualization"],
+  ["Money & gratitude",         "#lawofattraction #manifestation #moneymindset #abundancemindset #gratitude"],
+  ["Affirmations & energy",     "#lawofattraction #manifestation #affirmations #dailyaffirmations #highvibes"],
+  ["Self-love & relationships", "#lawofattraction #manifestation #selflove #selfworth #loveenergy"]
+];
+/* The first version's starter sets. If a save still has exactly these (never
+   edited), swap in the per-pillar sets and point each post at its pillar's set. */
+const OLD_TAGSETS = [
+  ["Core","#lawofattraction #manifestation #affirmations #abundance #manifest"],
+  ["Money","#moneymindset #abundancemindset #manifestmoney #wealthmindset #lawofattraction"],
+  ["Love","#selflove #manifestlove #loveaffirmations #lawofattraction #healing"],
+  ["Spiritual","#universe #synchronicity #angelnumbers #highvibes #spiritualawakening"]
+];
+function migrateTagSets(d){
+  const sets = d.tagSets || [];
+  const same = sets.length===OLD_TAGSETS.length && sets.every((t,i)=>t && t.name===OLD_TAGSETS[i][0] && t.tags===OLD_TAGSETS[i][1]);
+  if(!same) return;
+  const oldIds = new Set(sets.map(t=>t.id));
+  d.tagSets = DEFAULT_TAGSETS.map(([name,tags])=>({id:uid(), name, tags}));
+  (d.posts||[]).forEach(p=>{
+    if(!p || !(p.tagSet==="" || oldIds.has(p.tagSet))) return;
+    const m = d.tagSets.find(t=>t.name===p.pillar);
+    p.tagSet = m ? m.id : (p.tagSet ? d.tagSets[0].id : "");
+  });
+}
+const setForPillar = pillar => S.tagSets.find(t=>t.name===pillar);
 
 /* The first version shipped with a different starter pillar list. If a save
    still has that exact list (never edited), switch it to the current one and
@@ -377,6 +403,7 @@ function normalize(d){
   if(!Array.isArray(out.postiz.channels)) out.postiz.channels = [];
   ["pillars","hooks","ctas","tagSets","ideas","posts"].forEach(k=>{ if(!Array.isArray(out[k])) out[k] = D[k]; });
   migratePillars(out);
+  migrateTagSets(out);
   out.posts = out.posts.map(p=>{
     const b = blankPost(p.format);
     const q = Object.assign(b, p);
@@ -1069,7 +1096,7 @@ function renderEditor(){
       <label class="f">Call to action</label>
       <input type="text" data-f="cta" value="${esc(p.cta)}" placeholder="e.g. Save this for later ✨">
       ${S.ctas.length?`<div class="pick">${S.ctas.map((c,i)=>`<button data-a="cta-pick" data-i="${i}">${esc(c)}</button>`).join("")}</div>`:""}
-      <label class="f">Hashtag set</label>
+      <label class="f">Hashtag set <span style="font-weight:500">(follows the pillar)</span></label>
       <select data-f="tagSet"><option value="">None</option>${S.tagSets.map(t=>`<option value="${t.id}" ${t.id===p.tagSet?"selected":""}>${esc(t.name)}</option>`).join("")}</select>
       <label class="f">Extra hashtags</label>
       <input type="text" data-f="extraTags" value="${esc(p.extraTags)}" placeholder="#oneoff #tags">
@@ -1128,7 +1155,8 @@ function newPost(opts){
   if(opts.date){ p.date = opts.date; p.time = S.brand.time||""; }
   if(opts.pillar) p.pillar = opts.pillar;
   if(opts.title) p.title = opts.title;
-  if(S.tagSets[0]) p.tagSet = S.tagSets[0].id;
+  const ts = setForPillar(p.pillar) || S.tagSets[0];
+  if(ts) p.tagSet = ts.id;
   if(p.format!=="reel") p.beats = blankPost("reel").beats;
   S.posts.push(p); save();
   return p;
@@ -1262,7 +1290,17 @@ document.addEventListener("input", e=>{
     const n = el("post-q"); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(_){}
     return;
   }
-  if(p && t.dataset.f){ p[t.dataset.f] = t.value; touch(p); updateCounters(); return; }
+  if(p && t.dataset.f){
+    p[t.dataset.f] = t.value;
+    if(t.dataset.f==="pillar"){
+      const ts = setForPillar(t.value);
+      if(ts && p.tagSet!==ts.id){
+        p.tagSet = ts.id;
+        const sel = document.querySelector('#sheet select[data-f="tagSet"]'); if(sel) sel.value = ts.id;
+      }
+    }
+    touch(p); updateCounters(); return;
+  }
   if(p && t.dataset.li){ const it = p[t.dataset.li][+t.dataset.i]; if(it){ it[t.dataset.k] = t.value; touch(p); } return; }
   if(p && t.dataset.stat){ const [pl,m] = t.dataset.stat.split("."); p.stats[pl][m] = t.value==="" ? "" : Number(t.value); touch(p); return; }
   if(p && t.dataset.link){ p.links[t.dataset.link] = t.value; touch(p); return; }
