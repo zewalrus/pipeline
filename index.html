@@ -714,8 +714,62 @@ async function pzSync(){
   pzExt = {at:Date.now(), items};
   try{ localStorage.setItem(PZ_CACHE, JSON.stringify(pzExt)); localStorage.setItem(PZ_LAST, String(Date.now())); }catch(e){}
   if(changed) save();
-  return {changed, linked, external:items.length};
+  let stats = 0; try{ stats = await pzStats(); }catch(e){}
+  return {changed, linked, external:items.length, stats};
 }
+/* ---------- stats from Postiz ----------
+   Postiz returns a list like [{label:"Likes", data:[{total, date}, …]}, …] for
+   a published post. Fetch it for posts Postiz published, on a slowing schedule
+   (twice a day at first, then every few days, stopping after 30 days), and at
+   most a few posts per check so we stay inside Postiz's hourly request limit. */
+const STAT_LABELS = {
+  views:["views","video views","plays","impressions","reach"],
+  likes:["likes","reactions"], comments:["comments"], shares:["shares"],
+  saves:["saves","saved"], follows:["follows","new followers","followers gained"]
+};
+function metricValue(m){
+  const pts = (Array.isArray(m.data) ? m.data : []).map(d=>Number(d.total ?? d.value ?? 0)).filter(n=>!isNaN(n));
+  if(!pts.length) return Number(m.total ?? m.value ?? NaN);
+  const rising = pts.every((v,i)=>i===0 || v>=pts[i-1]);
+  return rising ? pts[pts.length-1] : pts.reduce((a,b)=>a+b,0); // running totals vs daily counts
+}
+function readStats(list){
+  const out = {};
+  const rows = (Array.isArray(list) ? list : []).map(m=>[String(m.label||m.name||"").toLowerCase().trim(), metricValue(m)]);
+  Object.entries(STAT_LABELS).forEach(([key, names])=>{
+    for(const n of names){ const r = rows.find(([l])=>l===n); if(r && !isNaN(r[1])){ out[key] = Math.round(r[1]); break; } }
+  });
+  return out;
+}
+function statsDue(p, k){
+  const at = num(p.posted[k]); if(!at) return false;
+  const age = Date.now()-at; if(age < 60*60e3 || age > 30*864e5) return false;
+  const last = num((p.statsAt||{})[k]);
+  const every = age < 3*864e5 ? 12*36e5 : age < 14*864e5 ? 2*864e5 : 7*864e5;
+  return Date.now()-last >= every;
+}
+async function pzStats(only){
+  const force = !!only, jobs = [];
+  (only ? [only] : S.posts).forEach(p=>{ ((p.pz && p.pz.ids) || []).forEach(r=>{
+    if(r.plat && (force ? num(p.posted[r.plat]) : statsDue(p, r.plat))) jobs.push({p, r});
+  }); });
+  jobs.sort((a,b)=>num((a.p.statsAt||{})[a.r.plat]) - num((b.p.statsAt||{})[b.r.plat]));
+  let n = 0;
+  for(const {p, r} of jobs.slice(0, force ? 12 : 6)){
+    const days = Math.min(90, Math.ceil((Date.now()-num(p.posted[r.plat]))/864e5)+1);
+    let res;
+    try{ res = await pz("/public/v1/analytics/post/"+encodeURIComponent(r.id)+"?date="+days); }
+    catch(e){ if(/too many/i.test(e.message)) break; continue; }
+    p.statsAt = Object.assign({}, p.statsAt, {[r.plat]:Date.now()});
+    p.statsNote = Object.assign({}, p.statsNote);
+    if(res && res.missing){ p.statsNote[r.plat] = "missing"; touch(p); continue; }
+    const got = readStats(Array.isArray(res) ? res : (res && (res.data||res.metrics)) || []);
+    if(Object.keys(got).length){ Object.assign(p.stats[r.plat], got); p.statsNote[r.plat] = "auto"; n++; }
+    touch(p);
+  }
+  return n;
+}
+
 /* Check quietly when the app opens or comes back, at most every 10 minutes. */
 async function pzAutoCheck(){
   if(!pzReady() || !pzMapped()) return;
@@ -1203,6 +1257,22 @@ function contentHtml(p){
     <label class="f">Design notes</label><textarea data-f="visual" rows="2" placeholder="Background, font, colors">${esc(p.visual)}</textarea>`;
 }
 
+function statsHelp(p){
+  const auto = PLATS.filter(([k])=>p.posted[k] && ((p.pz&&p.pz.ids)||[]).some(r=>r.plat===k));
+  if(!auto.length || !pzReady())
+    return `<p class="small" style="margin-bottom:8px">Check the post's insights after 2–3 days and log them here. Posts published through Postiz fill this in automatically. The Today tab uses these numbers to show what's working.</p>`;
+  const lines = auto.map(([k,n])=>{
+    const note = (p.statsNote||{})[k], at = num((p.statsAt||{})[k]);
+    if(note==="missing") return n+": Postiz couldn't match this to the live post yet. Open the post in Postiz and connect it.";
+    if(!at) return n+": stats arrive automatically about an hour after posting.";
+    const d = new Date(at);
+    return n+": updated from Postiz "+nice(ymd(d))+" at "+time12(pad(d.getHours())+":"+pad(d.getMinutes()))+(note==="auto"?"":" (no numbers yet)");
+  });
+  return `<p class="small" style="margin-bottom:6px">${lines.map(esc).join("<br>")}</p>
+    <p class="small" style="margin-bottom:8px">Updates twice a day at first, then every few days for 30 days. You can still type numbers in.</p>
+    <div class="row" style="margin:0 0 10px"><button class="ghost tiny" data-a="pz-stats" data-id="${p.id}">Update stats now</button></div>`;
+}
+
 function mediaHtml(p){
   if(!pzReady()) return `<div class="panel"><h3>Media</h3><p class="small">Connect Postiz in the Kit tab to attach your video or images here and schedule automatically.</p></div>`;
   const hint = {reel:"One video.", carousel:"2 to "+CAROUSEL_MAX+" photos or videos, in order.", image:"One image."}[p.format];
@@ -1305,7 +1375,7 @@ function renderEditor(){
     </div>
 
     ${anyPosted(p) ? `<div class="panel">
-      <h3>Results</h3><p class="small" style="margin-bottom:8px">Check the post's insights after 2–3 days and log them here. The Today tab uses them to show what's working.</p>
+      <h3>Results</h3>${statsHelp(p)}
       ${PLATS.filter(([k])=>p.posted[k]).map(([k,n])=>`<div class="plat-h">${n}</div>
         <div class="statgrid">${METRICS.map(([m,mn])=>`<div><label class="f">${mn}</label>
           <input type="number" min="0" inputmode="numeric" data-stat="${k}.${m}" value="${esc(p.stats[k][m])}"></div>`).join("")}</div>`).join("")}
@@ -1444,6 +1514,12 @@ document.addEventListener("click", e=>{
     case "plan-import": {
       const t = el("plan-paste").value; if(!t.trim()){ toast("Paste the rows first"); return; }
       runImport(t); return;
+    }
+    case "pz-stats": if(!p) return; {
+      busy(b, true, "Updating…");
+      pzStats(p).then(n=>{ renderEditor(); render(); toast(n ? "Stats updated" : "No new numbers from Postiz yet"); })
+        .catch(err=>{ busy(b, false, "Update stats now"); toast(err.message); });
+      return;
     }
     case "pz-forget": setRelayCfg({}); renderKit(); toast("Removed from this device"); return;
     case "pz-schedule": if(!p) return; {
