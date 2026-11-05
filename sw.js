@@ -1,7 +1,7 @@
 /* Bump VERSION on every deploy — it wipes the old cache and forces a refresh.
    Strategy is network-first on purpose: you always get the newest file when
    online, and the cache only steps in when there's no connection. */
-const VERSION = "studio-2026-11-05b";
+const VERSION = "studio-2026-11-05c";
 
 const SHELL = [
   "./",
@@ -9,7 +9,9 @@ const SHELL = [
   "./firebase-config.js",
   "./manifest.webmanifest",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./icon.svg",
+  "./apple-touch-icon.png"
 ];
 
 /* Firebase traffic must never be cached — stale auth or data is worse than none. */
