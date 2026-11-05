@@ -1,7 +1,7 @@
 /* Bump VERSION on every deploy — it wipes the old cache and forces a refresh.
    Strategy is network-first on purpose: you always get the newest file when
    online, and the cache only steps in when there's no connection. */
-const VERSION = "studio-2026-11-05a";
+const VERSION = "studio-2026-11-05b";
 
 const SHELL = [
   "./",
@@ -20,7 +20,8 @@ const KEEPABLE = h =>
   h === self.location.hostname ||
   h === "fonts.googleapis.com" ||
   h === "fonts.gstatic.com" ||
-  h === "www.gstatic.com";
+  h === "www.gstatic.com" ||
+  h === "cdnjs.cloudflare.com";
 
 self.addEventListener("install", e => {
   self.skipWaiting();
