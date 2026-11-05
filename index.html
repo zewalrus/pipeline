@@ -1108,8 +1108,8 @@ function kitImport(){
   return `<div class="panel">
     <h3>Import content plan</h3>
     <p class="small">Turns each row of your content calendar spreadsheet into a post, with its date, time, format, pillar, on-image text, slides or visual notes, caption and hashtags.</p>
-    <p class="small" style="margin-top:6px"><b>Option 1:</b> In Google Sheets, download the sheet as a CSV file (on a computer: File → Download → .csv; in the app: ⋮ → Share &amp; export → Send a copy → CSV). Then pick it here.</p>
-    <label class="filebtn" style="margin-top:8px">Pick CSV file<input type="file" id="plan-file" accept=".csv,.tsv,.txt,text/csv,text/plain,text/tab-separated-values" hidden></label>
+    <p class="small" style="margin-top:6px"><b>Option 1:</b> Pick the spreadsheet file: an Excel file (.xlsx), or a CSV. From Google Sheets, download it as either one (on a computer: File → Download; in the app: ⋮ → Share &amp; export → Send a copy).</p>
+    <label class="filebtn" style="margin-top:8px">Pick .xlsx or .csv file<input type="file" id="plan-file" accept=".xlsx,.xlsm,.xls,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain,text/tab-separated-values" hidden></label>
     <p class="small" style="margin-top:12px"><b>Option 2:</b> Select the rows in the sheet, including the header row, copy them, and paste here.</p>
     <textarea id="plan-paste" rows="3" placeholder="Paste rows here" style="margin-top:6px"></textarea>
     <div class="row"><button class="ghost tiny" data-a="plan-import">Import pasted rows</button></div>
@@ -1204,6 +1204,32 @@ function importPlan(text){
   save();
   return {added, updated, kept, bad};
 }
+/* Excel files: load SheetJS only when needed, pick the sheet whose header row
+   has Date + Format columns (else the first sheet), and turn it into CSV for
+   the same importer. Cells are read as displayed, so dates and times come
+   through the way the sheet shows them (e.g. "Nov 4, 2026", "8:00 AM"). */
+let xlsxLib = null;
+function loadXlsx(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(xlsxLib) return xlsxLib;
+  xlsxLib = new Promise((ok, fail)=>{
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    sc.onload = () => ok(window.XLSX);
+    sc.onerror = () => { xlsxLib = null; fail(new Error("Couldn't load the spreadsheet reader. Check your connection and try again.")); };
+    document.head.appendChild(sc);
+  });
+  return xlsxLib;
+}
+async function xlsxToCsv(buf){
+  const X = await loadXlsx();
+  let wb; try{ wb = X.read(buf, {type:"array", cellDates:true}); }catch(e){ throw new Error("That file couldn't be read as a spreadsheet."); }
+  const csvs = wb.SheetNames.map(n=>X.utils.sheet_to_csv(wb.Sheets[n], {blankrows:false, rawNumbers:false}));
+  const pick = csvs.find(c=>{ const h = (parseTable(c)[0]||[]).join(" ").toLowerCase(); return h.includes("date") && h.includes("format"); }) || csvs[0];
+  if(!pick || !pick.trim()) throw new Error("The spreadsheet looks empty.");
+  return pick;
+}
+
 function runImport(text){
   const m = el("plan-msg");
   try{
@@ -1643,7 +1669,15 @@ document.addEventListener("change", e=>{
   }
   if(e.target.id==="plan-file"){
     const f = e.target.files[0]; if(!f) return;
-    const r = new FileReader(); r.onload = () => runImport(r.result); r.readAsText(f); e.target.value = "";
+    e.target.value = "";
+    if(/\.(xlsx|xlsm|xls)$/i.test(f.name) || /spreadsheetml|ms-excel/.test(f.type)){
+      const m = el("plan-msg"); if(m){ m.textContent = "Reading spreadsheet…"; m.style.color = ""; }
+      f.arrayBuffer().then(xlsxToCsv).then(runImport).catch(err=>{
+        const m2 = el("plan-msg"); if(m2){ m2.textContent = err.message; m2.style.color = "var(--bad)"; }
+      });
+      return;
+    }
+    const r = new FileReader(); r.onload = () => runImport(r.result); r.readAsText(f);
     return;
   }
   if(e.target.id!=="import-file") return;
