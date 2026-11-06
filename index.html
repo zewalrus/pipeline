@@ -216,6 +216,9 @@ details.more summary{cursor:pointer;font-weight:500;font-size:14px;color:var(--a
 .mitem .mt button{min-height:28px;min-width:28px;padding:2px 6px;font-size:13px;background:rgba(255,255,255,.92);color:#1D1C1F;border:0;border-radius:8px}
 .filebtn{display:inline-flex;align-items:center;min-height:42px;padding:8px 16px;border-radius:10px;background:var(--sunk);
   color:var(--ink);font-weight:500;font-size:14px;cursor:pointer}
+.dupg{border-top:1px solid var(--line);padding:12px 0 4px}
+.dupl{display:flex;flex-direction:column;margin-top:4px}
+.dupl b{font-weight:500;font-size:14px}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav) + 18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;
   background:var(--ink);color:var(--bg);border-radius:999px;padding:10px 18px;font-size:14px;font-weight:500;
   display:none;max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.18)}
@@ -683,6 +686,32 @@ function platKeyOf(x){
 }
 const pzState = x => String(x.state || x.status || "").toUpperCase();
 
+/* Loose text comparison so the same post is recognised even when a caption was
+   tweaked: share of the shorter text's words that also appear in the other. */
+const normWords = t => String(t||"").toLowerCase().replace(/#\w+/g," ").replace(/https?:\S+/g," ")
+  .replace(/[^a-z0-9À-ɏ]+/g," ").split(" ").filter(w=>w.length>2).slice(0,60);
+function simText(a, b){
+  const A = new Set(normWords(a)), B = new Set(normWords(b));
+  if(!A.size || !B.size) return 0;
+  let n = 0; A.forEach(w=>{ if(B.has(w)) n++; });
+  return n / Math.min(A.size, B.size);
+}
+const postText = p => [p.hook, p.caption].filter(Boolean).join(" ");
+/* What kind of post a Postiz post is, from its media: a video is a reel,
+   several items a carousel, one picture an image. Empty when unknown. */
+function pzFormatOf(arr){
+  for(const x of arr){
+    let media = x.image;
+    if(typeof media==="string"){ try{ media = JSON.parse(media); }catch(e){ media = []; } }
+    if(!Array.isArray(media) || !media.length) continue;
+    const isVid = m => /\.(mp4|mov|m4v|webm)(\?|$)/i.test(String(m.path||m.url||"")) || /^video/.test(String(m.type||m.mimeType||""));
+    if(media.some(isVid)) return "reel";
+    return media.length>1 ? "carousel" : "image";
+  }
+  const pt = arr.map(x=>{ try{ return (typeof x.settings==="string" ? JSON.parse(x.settings) : x.settings||{}).post_type; }catch(e){ return ""; } }).find(Boolean);
+  return pt==="reel" ? "reel" : "";
+}
+
 /* Update this app's scheduled posts from a Postiz post list. */
 function pzApply(list){
   let changed = 0;
@@ -727,15 +756,49 @@ async function pzSync(){
     items.push({ ids, plats:[...new Set(ids.map(r=>r.plat).filter(Boolean))], names:[...new Set(names)],
       date:ymd(d), time:pad(d.getHours())+":"+pad(d.getMinutes()), iso:d.toISOString(),
       state:arr.map(pzState).includes("ERROR") ? "ERROR" : arr.every(x=>pzState(x)==="PUBLISHED") ? "PUBLISHED" : pzState(arr[0]),
-      text:stripHtml(arr[0].content).slice(0,160), url });
+      text:stripHtml(arr[0].content).slice(0,160), full:stripHtml(arr[0].content), format:pzFormatOf(arr), url });
   });
-  /* A plan post in the same slot (same day, within 15 min) is the same post: link them. */
+  /* Instagram and Facebook scheduled as two separate Postiz posts: same time,
+     same caption, different platforms. Show them as one. */
+  items.sort((a,b)=>a.iso.localeCompare(b.iso));
+  for(let i=0;i<items.length;i++){
+    for(let j=i+1;j<items.length;j++){
+      const a = items[i], b = items[j];
+      if(!a || !b || a.iso!==b.iso) continue;
+      if(a.plats.some(k=>b.plats.includes(k))) continue;
+      if(simText(a.full, b.full) < 0.8 && a.full.slice(0,60)!==b.full.slice(0,60)) continue;
+      a.ids = a.ids.concat(b.ids); a.plats = [...new Set(a.plats.concat(b.plats))]; a.names = [...new Set(a.names.concat(b.names))];
+      a.format = a.format || b.format; a.url = a.url || b.url;
+      if(b.state==="ERROR") a.state = "ERROR"; else if(a.state==="PUBLISHED" && b.state!=="PUBLISHED") a.state = b.state;
+      items[j] = null;
+    }
+  }
+  items = items.filter(Boolean);
+  /* Link a Postiz post to the plan post it is the same as, so the day shows it
+     once. Same day and platform, then: within 15 minutes, or the same format
+     with similar text, or the only post of that format that day on both sides. */
+  const claimed = new Set();
+  const free = (date, fmt) => S.posts.filter(p=>!claimed.has(p.id) && !p.pz && !isPosted(p) && !isMeta(p) && p.date===date && (!fmt || p.format===fmt));
   items = items.filter(it=>{
     if(!it.plats.length) return true;
-    const p = S.posts.find(p=>!p.pz && !isPosted(p) && p.date===it.date && p.time && Math.abs(toMin(p.time)-toMin(it.time))<=15
-                         && it.plats.some(k=>p.plats[k]));
-    if(!p) return true;
+    const cands = free(it.date).filter(p=>it.plats.some(k=>p.plats[k]));
+    let best = null, bestScore = 0;
+    cands.forEach(p=>{
+      const diff = p.time ? Math.abs(toMin(p.time)-toMin(it.time)) : 999;
+      const fmtOK = !it.format || p.format===it.format;
+      const sim = simText(postText(p), it.full);
+      const onlyOne = it.format && fmtOK && free(it.date, it.format).length===1
+        && items.filter(o=>o.date===it.date && o.format===it.format).length===1;
+      let score = 0;
+      if(diff<=15 && (fmtOK || sim>=0.3)) score = 3 + sim;
+      else if(fmtOK && sim>=0.35) score = 2 + sim;
+      else if(onlyOne) score = 1;
+      if(score > bestScore){ best = p; bestScore = score; }
+    });
+    if(!best) return true;
+    const p = best; claimed.add(p.id);
     p.pz = {at:Date.now(), date:it.iso, ids:it.ids.filter(r=>r.plat), state:{}, err:"", linked:true};
+    p.date = it.date; p.time = it.time;   // show the time it's really going out
     p.stage = "ready"; p.updated = Date.now(); linked++; changed++;
     return false;
   });
@@ -875,7 +938,7 @@ function extCard(x){
   const st = x.state==="PUBLISHED" ? "posted" : x.state==="ERROR" ? "failed" : "scheduled";
   const tag = x.url ? "a" : "div";
   return `<${tag} class="xc" ${x.url?`href="${esc(x.url)}" target="_blank" rel="noopener"`:""}>
-    <span class="pzb">From Postiz</span> <span class="stage ${st==="posted"?"posted":""}" ${st==="failed"?'style="color:var(--bad)"':""}>${st}</span>
+    ${x.format?`<span class="ft ${x.format}">${fmtName(x.format)}</span> `:""}<span class="pzb">From Postiz</span> <span class="stage ${st==="posted"?"posted":""}" ${st==="failed"?'style="color:var(--bad)"':""}>${st}</span>
     <span class="t">${esc(x.text || "(no caption)")}</span>
     <span class="m">${x.names.map(n=>`<span class="pb ${n==="IG"?"ig":n==="FB"?"fb":""} ${st==="posted"?"posted":""}"><span>${esc(n)}</span></span>`).join(" ")}<span>· ${time12(x.time)}</span></span>
   </${tag}>`;
@@ -1041,6 +1104,9 @@ function renderPlan(){
       <span class="grow"><b>${reelsLeft ? reelsLeft+" of "+reels.length+" reel"+(reels.length===1?"":"s")+" still to schedule" : reels.length ? "All "+reels.length+" reels scheduled ✨" : "No reels this week"}</b><br>
       <span class="small">${allLeft} post${allLeft===1?"":"s"} still to do this week</span></span>
       ${allLeft ? `<button class="ghost tiny" data-a="pfgo" data-v="todo">See to-do</button>` : ""}</div></div>` : ""}
+    ${(()=>{ const d = findDupes([wsK, weK]); return d.count ? `<div class="panel" style="padding:10px 12px;border-color:var(--bad)"><div class="row" style="margin:0">
+      <span class="grow"><b>${d.count} duplicate${d.count===1?"":"s"} this week</b><br><span class="small">Some days show the same post twice.</span></span>
+      <button class="ghost tiny" data-a="dup-go">Review</button></div></div>` : ""; })()}
     ${days}
     <h2 style="margin-top:20px">Ready, not scheduled</h2>
     <p class="sub">Open one and give it a date to put it on the plan.</p>
@@ -1049,6 +1115,7 @@ function renderPlan(){
 
 /* ---------- KIT ---------- */
 function renderKit(){
+  setTimeout(renderDupes, 0);
   const B = S.brand;
   el("kit-dyn").innerHTML = `
     <h2>Kit</h2><p class="sub">Your brand settings, hashtag sets and saved lines. Everything here shows up while you build posts.</p>
@@ -1094,6 +1161,8 @@ function renderKit(){
     </div>
 
     ${kitImport()}
+
+    ${kitDupes()}
 
     ${kitPostiz()}
 
@@ -1176,9 +1245,14 @@ function importPlan(text){
     const date = parseDateCell(g(C.date)); if(!date){ bad++; return; }
     const time = parseTimeCell(g(C.time)), format = formatFromCell(g(C.format));
     const key = date+"|"+time+"|"+format;
-    let p = S.posts.find(x=>x.importKey===key);
+    const onImageText = g(C.text);
+    let p = S.posts.find(x=>x.importKey===key)
+      /* same day, same format and same on-image text: the row's time was changed */
+      || (onImageText && S.posts.find(x=>x.date===date && x.format===format && x.importKey
+           && normWords(x.hook).join(" ")===normWords(onImageText).join(" ")));
     if(p && (anyPosted(p) || p.pz || p.meta)){ kept++; return; }   // never overwrite something already scheduled or posted
-    if(!p){ p = blankPost(format); p.importKey = key; S.posts.push(p); added++; } else updated++;
+    if(!p){ p = blankPost(format); S.posts.push(p); added++; } else updated++;
+    p.importKey = key;
     const rawPillar = g(C.pillar);
     p.pillar = S.pillars.find(x=>x.toLowerCase()===rawPillar.toLowerCase()) || rawPillar;
     p.format = format; p.date = date; p.time = time;
@@ -1246,6 +1320,112 @@ function runImport(text){
     toast("Plan imported");
     if(pzReady() && pzMapped()) pzSync().then(x=>{ if(x.linked){ render(); toast("Linked "+x.linked+" to posts already in Postiz"); } }).catch(()=>{});
   }catch(err){ if(m){ m.textContent = err.message; m.style.color = "var(--bad)"; } }
+}
+
+/* ---------- duplicates ----------
+   Finds (1) plan posts that are the same post twice on a day, and (2) posts
+   that look scheduled twice in Postiz. Nothing is removed without a tap. */
+function keepRank(p){
+  return (p.pz?8:0) + (isPosted(p)?6:0) + (isMeta(p)?4:0) + (p.media && p.media.length?2:0) + (p.stage==="ready"?1:0);
+}
+const removable = p => !p.pz && !isPosted(p) && !isMeta(p);
+function findDupes(range){
+  const inRange = d => !range || (d>=range[0] && d<=range[1]);
+  const app = [], pzSide = [];
+  const byDay = {};
+  S.posts.forEach(p=>{ if(p.date && inRange(p.date)) (byDay[p.date+"|"+p.format] = byDay[p.date+"|"+p.format] || []).push(p); });
+  Object.values(byDay).forEach(list=>{
+    const used = new Set();
+    list.forEach((a,i)=>{
+      if(used.has(a.id)) return;
+      const grp = [a];
+      list.slice(i+1).forEach(b=>{
+        if(used.has(b.id)) return;
+        const same = (a.importKey && a.importKey===b.importKey)
+          || (normWords(a.hook).length>2 && normWords(a.hook).join(" ")===normWords(b.hook).join(" "))
+          || simText(postText(a), postText(b)) >= 0.8;
+        if(same){ grp.push(b); used.add(b.id); }
+      });
+      if(grp.length<2) return;
+      used.add(a.id);
+      grp.sort((x,y)=>keepRank(y)-keepRank(x) || y.updated-x.updated);
+      const keep = grp[0], extras = grp.slice(1);
+      app.push({date:a.date, format:a.format, keep, extras, removable:extras.filter(removable), stuck:extras.filter(x=>!removable(x))});
+    });
+  });
+  /* Postiz side: two Postiz posts on the same day and format with the same text. */
+  const pzPosts = [
+    ...S.posts.filter(p=>p.pz && p.date && inRange(p.date)).map(p=>({kind:"app", p, date:p.date, format:p.format, time:p.time, text:postText(p), label:titleOf(p)})),
+    ...extItems().filter(x=>inRange(x.date)).map(x=>({kind:"ext", x, date:x.date, format:x.format||"", time:x.time, text:x.full||x.text, label:x.text}))
+  ];
+  const seen = new Set();
+  pzPosts.forEach((a,i)=>{
+    if(seen.has(i)) return;
+    const grp = [a];
+    pzPosts.forEach((b,j)=>{
+      if(j<=i || seen.has(j) || b.date!==a.date) return;
+      if(a.format && b.format && a.format!==b.format) return;
+      if(simText(a.text, b.text) >= 0.8){ grp.push(b); seen.add(j); }
+    });
+    if(grp.length<2) return;
+    seen.add(i);
+    grp.sort((x,y)=>(x.kind==="app"?0:1)-(y.kind==="app"?0:1));   // keep the one linked to the plan
+    pzSide.push({date:a.date, format:a.format || (grp.find(g=>g.format)||{}).format || "", keep:grp[0], extras:grp.slice(1)});
+  });
+  return {app, pzSide, count: app.reduce((n,g)=>n+g.removable.length,0) + pzSide.reduce((n,g)=>n+g.extras.length,0)};
+}
+let dupView = null;
+function dupLine(label, sub){ return `<div class="dupl"><b>${esc(label)}</b>${sub?`<span class="small">${esc(sub)}</span>`:""}</div>`; }
+function renderDupes(){
+  const box = el("dup-results"); if(!box) return;
+  if(!dupView){ box.innerHTML = ""; return; }
+  const msg = el("dup-msg"); if(msg) msg.textContent = dupView.note || "";
+  const {app, pzSide} = dupView;
+  if(!app.length && !pzSide.length){ box.innerHTML = `<div class="empty" style="margin-top:12px">No duplicates found ✨</div>`; return; }
+  const total = app.reduce((n,g)=>n+g.removable.length,0);
+  box.innerHTML = `
+    ${app.length ? `<h3 style="margin-top:16px">Same post twice in your plan</h3>
+      ${total>1?`<div class="row" style="margin-top:0"><button class="tiny" data-a="dup-remove-all">Remove all ${total} extra copies</button></div>`:""}
+      ${app.map((g,i)=>`<div class="dupg">
+        <div class="small">${nice(g.date)} · ${fmtName(g.format)}</div>
+        ${dupLine("Keeping: "+titleOf(g.keep), STAGE_LABEL[stageOf(g.keep)]+(g.keep.time?" · "+time12(g.keep.time):""))}
+        ${g.extras.map(x=>dupLine((removable(x)?"Extra: ":"Also scheduled: ")+titleOf(x), STAGE_LABEL[stageOf(x)]+(x.time?" · "+time12(x.time):""))).join("")}
+        ${g.removable.length ? `<div class="row"><button class="ghost tiny" data-a="dup-remove" data-i="${i}">Remove ${g.removable.length} extra cop${g.removable.length===1?"y":"ies"}</button></div>` : ""}
+        ${g.stuck.length ? `<p class="small" style="margin-top:6px">${g.stuck.length===1?"One copy is":"Some copies are"} already scheduled or posted, so ${g.stuck.length===1?"it's":"they're"} left alone. If it's in Postiz twice, cancel the extra there.</p>` : ""}
+      </div>`).join("")}` : ""}
+    ${pzSide.length ? `<h3 style="margin-top:16px">Looks scheduled twice in Postiz</h3>
+      <p class="small" style="margin-bottom:8px">These would post twice. Cancel the extra copy in Postiz.</p>
+      ${pzSide.map((g,i)=>`<div class="dupg">
+        <div class="small">${nice(g.date)}${g.format?" · "+fmtName(g.format):""}</div>
+        ${dupLine("Keeping: "+g.keep.label.slice(0,80), (g.keep.kind==="app"?"in your plan":"in Postiz")+" · "+time12(g.keep.time))}
+        ${g.extras.map((x,j)=>`${dupLine("Extra: "+x.label.slice(0,80), "in Postiz · "+time12(x.time))}
+          <div class="row" style="margin-top:4px"><button class="ghost tiny danger" data-a="dup-pz-cancel" data-i="${i}" data-j="${j}">Cancel this one in Postiz</button></div>`).join("")}
+      </div>`).join("")}` : ""}`;
+}
+async function runFindDupes(btn){
+  let note = "";
+  if(pzReady() && pzMapped()){
+    busy(btn, true, "Checking Postiz…");
+    try{ await pzSync(); }catch(e){ note = "Couldn't reach Postiz, so only your plan was checked. ("+e.message+")"; }
+  }
+  dupView = findDupes(null);
+  dupView.note = note || (dupView.count ? "Found "+dupView.count+" extra cop"+(dupView.count===1?"y":"ies")+"." : "");
+  render(); renderDupes();
+}
+function removeExtras(groups){
+  const ids = new Set(groups.flatMap(g=>g.removable.map(p=>p.id)));
+  if(!ids.size) return 0;
+  S.posts = S.posts.filter(p=>!ids.has(p.id)); save();
+  return ids.size;
+}
+function kitDupes(){
+  return `<div class="panel">
+    <h3>Duplicates</h3>
+    <p class="small">Finds days where the same post shows up twice, in your plan or in Postiz. Nothing is removed until you tap.</p>
+    <div class="row"><button data-a="dup-find">Find duplicates</button></div>
+    <p class="small" id="dup-msg" style="margin-top:6px"></p>
+    <div id="dup-results"></div>
+  </div>`;
 }
 
 function kitPostiz(){
@@ -1595,6 +1775,32 @@ document.addEventListener("click", e=>{
       busy(b, true, "Updating…");
       pzStats(p).then(n=>{ renderEditor(); render(); toast(n ? "Stats updated" : "No new numbers from Postiz yet"); })
         .catch(err=>{ busy(b, false, "Update stats now"); toast(err.message); });
+      return;
+    }
+    case "dup-find": runFindDupes(b); return;
+    case "dup-go": closeEditor(); view = "kit"; render();
+      setTimeout(()=>{ const f = el("dup-results"); if(f) f.closest(".panel").scrollIntoView({behavior:"smooth"}); runFindDupes(document.querySelector('[data-a="dup-find"]')); }, 50);
+      return;
+    case "dup-remove": if(!dupView) return; {
+      const g = dupView.app[+b.dataset.i]; if(!g) return;
+      if(!confirm("Remove "+g.removable.length+" extra cop"+(g.removable.length===1?"y":"ies")+" of \""+titleOf(g.keep).slice(0,60)+"\"?")) return;
+      const n = removeExtras([g]); dupView = findDupes(null); dupView.note = "Removed "+n+"."; render(); toast("Removed "+n); return;
+    }
+    case "dup-remove-all": if(!dupView) return; {
+      const total = dupView.app.reduce((n,g)=>n+g.removable.length,0);
+      if(!confirm("Remove all "+total+" extra copies? The copy that's scheduled, posted or most complete is kept each time.")) return;
+      const n = removeExtras(dupView.app); dupView = findDupes(null); dupView.note = "Removed "+n+" extra copies."; render(); toast("Removed "+n+" extra copies"); return;
+    }
+    case "dup-pz-cancel": if(!dupView) return; {
+      const g = dupView.pzSide[+b.dataset.i], x = g && g.extras[+b.dataset.j]; if(!x) return;
+      if(!confirm("Cancel this post in Postiz? It won't be published.\n\n"+x.label.slice(0,120))) return;
+      busy(b, true, "Cancelling…");
+      (async()=>{
+        if(x.kind==="ext"){ for(const r of x.x.ids){ try{ await pz("/public/v1/posts/"+encodeURIComponent(r.id), {method:"DELETE"}); }catch(e){} } }
+        else await pzCancel(x.p);
+        await pzSync().catch(()=>{});
+        dupView = findDupes(null); render(); toast("Cancelled in Postiz");
+      })().catch(err=>{ busy(b, false, "Cancel this one in Postiz"); toast(err.message); });
       return;
     }
     case "pz-forget": setRelayCfg({}); renderKit(); toast("Removed from this device"); return;
